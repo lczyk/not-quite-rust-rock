@@ -43,15 +43,23 @@ environment:
 parts:
   rust:
     plugin: nil
-    stage-packages:
-      - rustc-1.93_rustc
-      # we want the base-files_chisel to generate the chisel manifest, and
-      # base-files_release-info  to indicate that this is a 26.04 rock
-      - base-files_chisel
-      - base-files_release-info
+    # Pull the chisel-releases definitions ourselves so we can drive
+    # `chisel cut` directly with retry-on-flaky-archive logic
+    # (rockcraft's default stage-packages flow has no retries and
+    # trips on intermittent "expected digest ..." errors).
+    source: https://github.com/canonical/chisel-releases.git
+    source-type: git
+    source-branch: ubuntu-26.04
+    build-snaps:
+      - chisel
     override-build: |
-      # this is not the default rustc for this base, so we just need to
-      # create the symlink for the rustc binary
+      # base-files_chisel -> chisel manifest in the rock
+      # base-files_release-info -> marks this as a 26.04 rock
+      bash "$CRAFT_PROJECT_DIR/hack/chisel_cut.sh" \
+        rustc-1.93_rustc \
+        base-files_chisel \
+        base-files_release-info
+      # rustc-1.93 is not the default rustc for this base; expose it as `rustc`
       ln -s rustc-1.93 "$CRAFT_PART_INSTALL"/usr/bin/rustc
 
   not-quite-cargo:

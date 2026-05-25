@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 
 INPUTS=(
     rockcraft.yaml
+    hack/chisel_cut.sh
 )
 
 sha256sum "${INPUTS[@]}" | sha256sum | cut -d' ' -f1

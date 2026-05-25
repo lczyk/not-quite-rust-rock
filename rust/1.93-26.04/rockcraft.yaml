@@ -51,6 +51,17 @@ parts:
       - chisel
     override-build: bash "$CRAFT_PROJECT_DIR/hack/rust_override_build.sh"
 
+  wild:
+    plugin: nil
+    after: [rust]
+    # Downloads a prebuilt wild-linker tarball for the build-for arch
+    # and drops the binary at /usr/bin/wild, with ld -> wild so rustc's
+    # default linker invocation finds it. See hack/wild_override_build.sh.
+    build-packages:
+      - curl
+      - ca-certificates
+    override-build: bash "$CRAFT_PROJECT_DIR/hack/wild_override_build.sh"
+
   not-quite-cargo:
     plugin: go
     after: [rust]

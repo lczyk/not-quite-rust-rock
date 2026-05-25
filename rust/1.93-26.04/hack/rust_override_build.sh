@@ -25,6 +25,8 @@ sed -i -E '/^[[:space:]]+gcc_gcc:[[:space:]]*$/d' \
 bash "$CRAFT_PROJECT_DIR/hack/chisel_cut.sh" \
     "$CHISEL_RELEASES_DIR" \
     rustc-1.93_rustc \
+    libgcc-14-dev_core \
+    bash_bins \
     base-files_chisel \
     base-files_release-info
 

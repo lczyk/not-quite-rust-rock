@@ -65,7 +65,6 @@ parts:
     build-packages:
       - make
       - git
-      - upx-ucl
     override-build: |
       make -C go build
       install -D -m 0755 go/bin/not-quite-cargo \

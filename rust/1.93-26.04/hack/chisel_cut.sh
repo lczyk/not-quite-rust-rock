@@ -9,7 +9,8 @@
 #   - $CRAFT_PART_INSTALL to be set (rockcraft env)
 set -e
 
-N_RETRIES=5
+N_RETRIES=10
+RETRY_DELAY=30
 PATTERNS=(
     # https://github.com/canonical/chisel-releases/issues/765
     "cannot fetch from archive"
@@ -40,8 +41,8 @@ for attempt in $(seq 1 "$N_RETRIES"); do
     done
 
     if [ -n "$matched" ] && [ "$attempt" -lt "$N_RETRIES" ]; then
-        echo "chisel cut failed (attempt $attempt/$N_RETRIES): $matched. Retrying..." >&2
-        sleep $((attempt * 2))
+        echo "chisel cut failed (attempt $attempt/$N_RETRIES): $matched. Retrying in ${RETRY_DELAY}s..." >&2
+        sleep "$RETRY_DELAY"
         continue
     fi
 

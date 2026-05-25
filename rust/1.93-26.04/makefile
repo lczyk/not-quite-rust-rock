@@ -6,7 +6,19 @@ help:
 
 
 DOCKER ?= docker
-PLATFORMS := amd64 arm64
+
+# Native arch for `make test` -- map uname output to docker/spread arch.
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  NATIVE_ARCH := amd64
+else ifeq ($(UNAME_M),aarch64)
+  NATIVE_ARCH := arm64
+else
+  $(error unsupported host arch: $(UNAME_M))
+endif
+
+# Default to native arch only -- override w/ PLATFORMS="amd64 arm64" for both.
+PLATFORMS ?= $(NATIVE_ARCH)
 
 .test-image.stamp: hack/Dockerfile.sshd-ubuntu-26.04
 	@$(foreach arch,$(PLATFORMS), \
@@ -34,8 +46,12 @@ rust_1.93.rock: .rock.stamp
 	rockcraft pack --verbosity=debug --debug
 	mv rust_1.93_*.rock rust_1.93.rock
 
-test: rust_1.93.rock .test-image.stamp  ## Run tests
-	spread
+# Default `make test` to the native arch only; override w/ SPREAD_FILTER=...
+# (e.g. SPREAD_FILTER= make test  to run every system).
+SPREAD_FILTER ?= craft-adhoc:ubuntu-26.04-$(NATIVE_ARCH)
+
+test: rust_1.93.rock .test-image.stamp  ## Run tests (native arch; override SPREAD_FILTER=)
+	spread $(SPREAD_FILTER)
 
 .PHONY: size
 size:  ## Show size of rust_1.93.rock if present

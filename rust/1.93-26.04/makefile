@@ -9,7 +9,7 @@ DOCKER ?= docker
 PLATFORMS := amd64 arm64
 
 .PHONY: build-test-image
-build-test-image: tests/hack/Dockerfile.sshd-ubuntu-26.04  ## Build test image for sshd-ubuntu-26.04
+build-test-image: hack/Dockerfile.sshd-ubuntu-26.04  ## Build test image for sshd-ubuntu-26.04
 	@$(foreach arch,$(PLATFORMS), \
 		$(DOCKER) build \
 			--tag sshd-ubuntu-26.04-$(arch) \

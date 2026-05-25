@@ -10,8 +10,8 @@ exclude:
 backends:
   craft-adhoc:
     type: adhoc
-    allocate: source tests/hack/spread_allocate.sh
-    discard: source tests/hack/spread_discard.sh
+    allocate: source hack/spread_allocate.sh
+    discard: source hack/spread_discard.sh
     systems:
       - ubuntu-26.04-arm64:
           password: ubuntu

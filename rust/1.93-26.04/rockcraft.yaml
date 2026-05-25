@@ -52,15 +52,7 @@ parts:
     source-branch: ubuntu-26.04
     build-snaps:
       - chisel
-    override-build: |
-      # base-files_chisel -> chisel manifest in the rock
-      # base-files_release-info -> marks this as a 26.04 rock
-      bash "$CRAFT_PROJECT_DIR/hack/chisel_cut.sh" \
-        rustc-1.93_rustc \
-        base-files_chisel \
-        base-files_release-info
-      # rustc-1.93 is not the default rustc for this base; expose it as `rustc`
-      ln -s rustc-1.93 "$CRAFT_PART_INSTALL"/usr/bin/rustc
+    override-build: bash "$CRAFT_PROJECT_DIR/rust_override_build.sh"
 
   not-quite-cargo:
     plugin: go

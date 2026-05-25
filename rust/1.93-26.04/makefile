@@ -32,7 +32,7 @@ PLATFORMS ?= $(NATIVE_ARCH)
 build-test-image: .test-image.stamp  ## Build test image if Dockerfile changed
 
 .PHONY: build
-build: rust_1.93.rock  ## Build rust rock package
+build: rust_1.93-26.04.rock  ## Build rust rock package
 
 .PHONY: FORCE
 FORCE:
@@ -42,23 +42,23 @@ FORCE:
 		cur=$$(cat $@ 2>/dev/null || true) ; \
 		[ "$$new" = "$$cur" ] || echo "$$new" > $@
 
-rust_1.93.rock: .rock.stamp
+rust_1.93-26.04.rock: .rock.stamp
 	rockcraft pack --verbosity=debug --debug
-	mv rust_1.93_*.rock rust_1.93.rock
+	mv rust_1.93-26.04_*.rock rust_1.93-26.04.rock
 
 # Default `make test` to the native arch only; override w/ SPREAD_FILTER=...
 # (e.g. SPREAD_FILTER= make test  to run every system).
 SPREAD_FILTER ?= craft-adhoc:ubuntu-26.04-$(NATIVE_ARCH)
 
-test: rust_1.93.rock .test-image.stamp  ## Run tests (native arch; override SPREAD_FILTER=)
+test: rust_1.93-26.04.rock .test-image.stamp  ## Run tests (native arch; override SPREAD_FILTER=)
 	spread $(SPREAD_FILTER)
 
 .PHONY: size
-size:  ## Show size of rust_1.93.rock if present
-	@if [ -f rust_1.93.rock ]; then \
-		du -h rust_1.93.rock | cut -f1; \
+size:  ## Show size of rust_1.93-26.04.rock if present
+	@if [ -f rust_1.93-26.04.rock ]; then \
+		du -h rust_1.93-26.04.rock | cut -f1; \
 	else \
-		echo "rust_1.93.rock not built"; \
+		echo "rust_1.93-26.04.rock not built"; \
 	fi
 
 .PHONY: clean-test-image
@@ -69,4 +69,4 @@ clean-test-image:  ## Remove sshd-ubuntu-26.04 test images
 
 .PHONY: clean
 clean:  ## Remove all built artifacts
-	rm -f rust_1.93.rock .rock.stamp .test-image.stamp
+	rm -f rust_1.93-26.04.rock .rock.stamp .test-image.stamp

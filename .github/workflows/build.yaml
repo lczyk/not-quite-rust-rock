@@ -4,9 +4,9 @@ name: Build
 
 # Reusable: builds per-arch rocks and stitches a multiarch manifest.
 # Artefacts uploaded:
-#   - rust_1.93_amd64  -> rust/1.93-26.04/*.rock (amd64)
-#   - rust_1.93_arm64  -> rust/1.93-26.04/*.rock (arm64)
-#   - rust_1.93        -> rust_1.93.rock        (multiarch oci-archive)
+#   - rust_1.93-26.04_amd64  -> rust/1.93-26.04/*.rock (amd64)
+#   - rust_1.93-26.04_arm64  -> rust/1.93-26.04/*.rock (arm64)
+#   - rust_1.93-26.04        -> rust_1.93-26.04.rock        (multiarch oci-archive)
 on:
   workflow_call:
 
@@ -35,7 +35,7 @@ jobs:
       - name: Save the built rock as a pipeline artifact
         uses: actions/upload-artifact@v6
         with:
-          name: rust_1.93_${{ matrix.arch }}
+          name: rust_1.93-26.04_${{ matrix.arch }}
           path: rust/1.93-26.04/*.rock
 
   build-multiarch:
@@ -46,7 +46,7 @@ jobs:
       - name: Download rock artifacts
         uses: actions/download-artifact@v6
         with:
-          pattern: rust_1.93_*
+          pattern: rust_1.93-26.04_*
           path: artifacts
           merge-multiple: true
 
@@ -58,17 +58,17 @@ jobs:
           buildah manifest create multiarch-rock
           buildah manifest add \
             --arch amd64 \
-            multiarch-rock oci-archive:artifacts/rust_1.93_amd64.rock
+            multiarch-rock oci-archive:artifacts/rust_1.93-26.04_amd64.rock
           buildah manifest add \
             --arch arm64 \
-            multiarch-rock oci-archive:artifacts/rust_1.93_arm64.rock
+            multiarch-rock oci-archive:artifacts/rust_1.93-26.04_arm64.rock
           buildah manifest push \
             --format oci \
             --all \
-            multiarch-rock oci-archive:rust_1.93.rock
+            multiarch-rock oci-archive:rust_1.93-26.04.rock
 
       - name: Upload multiarch rock
         uses: actions/upload-artifact@v6
         with:
-          name: rust_1.93
-          path: rust_1.93.rock
+          name: rust_1.93-26.04
+          path: rust_1.93-26.04.rock

@@ -32,7 +32,7 @@ jobs:
       - name: Download multiarch rock
         uses: actions/download-artifact@v6
         with:
-          name: rust_1.93
+          name: rust_1.93-26.04
           path: artifacts
 
       # Per-arch tags disabled -- the multiarch manifest already embeds
@@ -43,7 +43,7 @@ jobs:
       # - name: Download per-arch rocks
       #   uses: actions/download-artifact@v6
       #   with:
-      #     pattern: rust_1.93_*
+      #     pattern: rust_1.93-26.04_*
       #     path: artifacts
       #     merge-multiple: true
 
@@ -57,15 +57,15 @@ jobs:
           skopeo copy \
             --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
             --multi-arch=all \
-            oci-archive:artifacts/rust_1.93.rock \
+            oci-archive:artifacts/rust_1.93-26.04.rock \
             docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-26.04
           # Per-arch tags disabled; see comment above the per-arch
           # download step. Re-enable both at once if needed.
           # skopeo copy \
           #   --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-          #   oci-archive:artifacts/rust_1.93_amd64.rock \
+          #   oci-archive:artifacts/rust_1.93-26.04_amd64.rock \
           #   docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-26.04-amd64
           # skopeo copy \
           #   --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-          #   oci-archive:artifacts/rust_1.93_arm64.rock \
+          #   oci-archive:artifacts/rust_1.93-26.04_arm64.rock \
           #   docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-26.04-arm64

@@ -2,7 +2,6 @@
 # Mirrors not-quite-cargo's eza-build-plan example:
 # plan in upstream rust+cargo image -> patch + run in this rock
 # (with cargo absent and network off) -> verify built binary.
-# spellchecker: ignore eza rustc nqc
 
 source common.sh
 source defer.sh

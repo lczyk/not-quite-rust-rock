@@ -1,4 +1,3 @@
-# spellchecker: ignore sigpipe subshell
 # Set bash options
 set -eux
 

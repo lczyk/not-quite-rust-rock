@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# spellchecker: ignore rustc
-
 # shellcheck source=../../lib/common.sh
 source common.sh
 # shellcheck source=../../lib/defer.sh

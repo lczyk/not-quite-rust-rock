@@ -1,5 +1,3 @@
-# spellchecker: ignore rustc rockcraft coreutils binutils archiver
-
 name: rust
 version: '1.93-26.04'
 summary: Chiseled rust 1.93 rock

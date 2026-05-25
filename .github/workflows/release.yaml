@@ -1,7 +1,5 @@
 name: Release
 
-# spellchecker: ignore skopeo creds
-
 # Build + test + publish to ghcr on push of a revision tag (r1, r2, ...).
 on:
   push:

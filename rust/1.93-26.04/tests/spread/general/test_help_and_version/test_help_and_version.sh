@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 ## TESTS
-# spellchecker: ignore rustc
 
 # not-quite-cargo
 docker run --rm "$IMAGE_NAME:latest" exec not-quite-cargo --help \

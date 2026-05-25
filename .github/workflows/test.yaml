@@ -1,7 +1,5 @@
 name: Test
 
-# spellchecker: ignore skopeo
-
 # Reusable: runs spread against the per-arch rocks. Each runner stays
 # native (no qemu) -- amd64 runner exercises the amd64 rock against the
 # ubuntu-26.04-amd64 spread system; arm64 runner does the arm64 pair.

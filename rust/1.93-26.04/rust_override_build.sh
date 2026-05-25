@@ -5,7 +5,6 @@
 #
 # `chisel cut` is wrapped in hack/chisel_cut.sh to retry on the
 # intermittent "expected digest ..." flake from the ubuntu archive.
-# spellchecker: ignore rustc
 
 set -euo pipefail
 

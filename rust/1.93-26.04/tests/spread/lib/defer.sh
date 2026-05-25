@@ -3,7 +3,6 @@
 # It can be used in other scripts to provide the 'defer' function
 
 if [[ -z "${__DEFER_SH__:-}" ]]; then
-    # spellchecker: ignore Marcin Konowalczyk lczyk subshell
 
     __DEFER_SH_VERSION__='1.0.3'
 
@@ -97,7 +96,6 @@ if [[ -z "${__DEFER_SH__:-}" ]]; then
 
         status=0
         # Find all the test functions and run them
-        # spellchecker: ignore mpass mfail
         for test_func in $(declare -F | awk '{print $3}' | grep '^test_' | sort); do
             printf "Running %s... " "$test_func"
             if $test_func; then

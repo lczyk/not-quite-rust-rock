@@ -2,7 +2,6 @@
 # Mirrors not-quite-cargo's fd-no-features example:
 # plan in upstream rust+cargo image -> patch + run in this rock
 # (with cargo absent and network off) -> verify built binary.
-# spellchecker: ignore fd libc rustc nqc
 
 source common.sh
 source defer.sh

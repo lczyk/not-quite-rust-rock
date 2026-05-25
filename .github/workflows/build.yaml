@@ -1,7 +1,5 @@
 name: Build
 
-# spellchecker: ignore rockcraft multiarch buildah
-
 # Reusable: builds per-arch rocks and stitches a multiarch manifest.
 # Artefacts uploaded:
 #   - rust_1.93-26.04_amd64  -> rust/1.93-26.04/*.rock (amd64)

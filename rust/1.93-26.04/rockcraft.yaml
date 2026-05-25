@@ -46,8 +46,6 @@ parts:
       # cargo needs ca-certificates to be able to download crates.io index
       # + its required in SDK rocks
       - ca-certificates_data
-      # this is an SDK rock. we really want coreutils
-      - coreutils_bins
       # we want the base-files_chisel to generate the chisel manifest, and
       # base-files_release-info  to indicate that this is a 26.04 rock
       - base-files_chisel

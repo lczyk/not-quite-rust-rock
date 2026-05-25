@@ -1,9 +1,9 @@
 # ubuntu 26.04 with openssh-server installed
 
 # Build image for arm64 with:
-#   docker build -t sshd-ubuntu-26.04-arm64 -f tests/hack/Dockerfile.sshd-ubuntu-26.04 --platform linux/arm64 .
+#   docker build -t sshd-ubuntu-26.04-arm64 -f hack/Dockerfile.sshd-ubuntu-26.04 --platform linux/arm64 .
 # Build image for amd64 with:
-#   docker build -t sshd-ubuntu-26.04-amd64 -f tests/hack/Dockerfile.sshd-ubuntu-26.04 --platform linux/amd64 .
+#   docker build -t sshd-ubuntu-26.04-amd64 -f hack/Dockerfile.sshd-ubuntu-26.04 --platform linux/amd64 .
 
 FROM ubuntu:26.04
 

@@ -56,16 +56,19 @@ parts:
       ln -s rustc-1.93 "$CRAFT_PART_INSTALL"/usr/bin/rustc
 
   not-quite-cargo:
-    plugin: nil
+    plugin: go
     after: [rust]
     source: https://github.com/lczyk/not-quite-cargo.git
     source-type: git
+    source-subdir: go
     build-snaps:
       - go
     build-packages:
-      - make
       - git
     override-build: |
-      make -C go build
-      install -D -m 0755 go/bin/not-quite-cargo \
-        "$CRAFT_PART_INSTALL"/usr/bin/not-quite-cargo
+      mkdir -p ./internal/version
+      go run github.com/lczyk/version/go/cmd/generate-version \
+        -out ./internal/version/version.go -pkg version
+      craftctl default
+    organize:
+      bin/not-quite-cargo: usr/bin/not-quite-cargo

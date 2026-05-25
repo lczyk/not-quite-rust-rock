@@ -23,7 +23,7 @@ backends:
     #       workers: 2
 
 suites:
-  tests/spread/:
+  tests/spread/general/:
     summary: General integration tests
 
     environment:

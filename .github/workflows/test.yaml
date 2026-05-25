@@ -26,7 +26,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y skopeo
-          go install github.com/snapcore/spread/cmd/spread@latest
+          go install github.com/canonical/spread/cmd/spread@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Build sshd test image (arm64 only)

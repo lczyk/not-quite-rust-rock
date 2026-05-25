@@ -41,13 +41,12 @@ environment:
 parts:
   rust:
     plugin: nil
-    # Pull the chisel-releases definitions ourselves so we can drive
-    # `chisel cut` directly with retry-on-flaky-archive logic
-    # (rockcraft's default stage-packages flow has no retries and
-    # trips on intermittent "expected digest ..." errors).
-    source: https://github.com/canonical/chisel-releases.git
-    source-type: git
-    source-branch: ubuntu-26.04
+    # chisel-releases is cloned directly inside rust_override_build.sh
+    # (so we can drive `chisel cut` with the retry-on-flaky-archive
+    # wrapper instead of rockcraft's stage-packages flow, which has no
+    # retries and trips on intermittent "expected digest ..." errors).
+    build-packages:
+      - git
     build-snaps:
       - chisel
     override-build: bash "$CRAFT_PROJECT_DIR/rust_override_build.sh"

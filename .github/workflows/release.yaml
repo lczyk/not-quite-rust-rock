@@ -47,18 +47,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y skopeo
 
-      # - name: Publish to GitHub Container Registry
-      #   run: |
-      #     skopeo copy \
-      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-      #       --multi-arch=all \
-      #       oci-archive:artifacts/rust_1.93.rock \
-      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93
-      #     skopeo copy \
-      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-      #       oci-archive:artifacts/rust_1.93_amd64.rock \
-      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-amd64
-      #     skopeo copy \
-      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-      #       oci-archive:artifacts/rust_1.93_arm64.rock \
-      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-arm64
+      - name: Publish to GitHub Container Registry
+        run: |
+          skopeo copy \
+            --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+            --multi-arch=all \
+            oci-archive:artifacts/rust_1.93.rock \
+            docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93
+          skopeo copy \
+            --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+            oci-archive:artifacts/rust_1.93_amd64.rock \
+            docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-amd64
+          skopeo copy \
+            --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+            oci-archive:artifacts/rust_1.93_arm64.rock \
+            docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-arm64

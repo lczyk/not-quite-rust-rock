@@ -15,6 +15,13 @@ git clone --depth 1 --branch "$CHISEL_RELEASES_BRANCH" \
     https://github.com/canonical/chisel-releases.git \
     "$CHISEL_RELEASES_DIR"
 
+# Hot-patch the cloned rustc-1.93 slice to drop the `gcc_gcc:`
+# dependency. Upstream lists it under slices.rustc.essential, which
+# would pull a full gcc into the rock; we plan to keep the rock
+# gcc-free, so strip the line before `chisel cut` sees it.
+sed -i -E '/^[[:space:]]+gcc_gcc:[[:space:]]*$/d' \
+    "$CHISEL_RELEASES_DIR/slices/rustc-1.93.yaml"
+
 bash "$CRAFT_PROJECT_DIR/hack/chisel_cut.sh" \
     "$CHISEL_RELEASES_DIR" \
     rustc-1.93_rustc \

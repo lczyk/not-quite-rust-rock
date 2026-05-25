@@ -1,0 +1,115 @@
+name: Build and Publish Rocks
+
+# spellchecker: ignore rockcraft multiarch buildah skopeo creds
+
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-per-arch:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build rock
+        uses: canonical/craft-actions/rockcraft-pack@main
+        with:
+          path: rust/1.93-26.04
+          verbosity: brief
+
+      - name: Save the built rock as a pipeline artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: rust_1.93_${{ matrix.arch }}
+          path: rust/1.93-26.04/*.rock
+
+  build-multiarch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: build-per-arch
+    steps:
+      - name: Download rock artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: rust_1.93_*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create multiarch rock
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y buildah
+          ls -lha artifacts
+          buildah manifest create multiarch-rock
+          buildah manifest add \
+            --arch amd64 \
+            multiarch-rock oci-archive:artifacts/rust_1.93_amd64.rock
+          buildah manifest add \
+            --arch arm64 \
+            multiarch-rock oci-archive:artifacts/rust_1.93_arm64.rock
+          buildah manifest push \
+            --format oci \
+            --all \
+            multiarch-rock oci-archive:rust_1.93.rock
+
+      - name: Upload multiarch rock
+        uses: actions/upload-artifact@v6
+        with:
+          name: rust_1.93
+          path: rust_1.93.rock
+
+  publish-ghcr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: build-multiarch
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Download multiarch rock
+        uses: actions/download-artifact@v6
+        with:
+          name: rust_1.93
+          path: artifacts
+
+      - name: Download per-arch rocks
+        uses: actions/download-artifact@v6
+        with:
+          pattern: rust_1.93_*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Install Skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      # - name: Publish to GitHub Container Registry
+      #   run: |
+      #     skopeo copy \
+      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+      #       --multi-arch=all \
+      #       oci-archive:artifacts/rust_1.93.rock \
+      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93
+      #     skopeo copy \
+      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+      #       oci-archive:artifacts/rust_1.93_amd64.rock \
+      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-amd64
+      #     skopeo copy \
+      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+      #       oci-archive:artifacts/rust_1.93_arm64.rock \
+      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-arm64

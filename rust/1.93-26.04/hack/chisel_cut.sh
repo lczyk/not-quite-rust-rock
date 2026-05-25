@@ -10,7 +10,7 @@
 set -e
 
 N_RETRIES=10
-RETRY_DELAY=30
+RETRY_DELAY=60
 PATTERNS=(
     # https://github.com/canonical/chisel-releases/issues/765
     "cannot fetch from archive"

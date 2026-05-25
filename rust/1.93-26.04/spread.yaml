@@ -1,48 +1,59 @@
-project: rustc-1.93-26.04
+project: rust
+
+path: /rust
+
+exclude:
+  - .github
+  - .git
+  - .vscode
 
 backends:
-  craft:
-    type: craft
+  craft-adhoc:
+    type: adhoc
+    allocate: source tests/hack/spread_allocate.sh
+    discard: source tests/hack/spread_discard.sh
     systems:
-      - ubuntu-24.04:
-  
+      - ubuntu-26.04-arm64:
+          password: ubuntu
+          # TODO(lczyk): Enable multiple workers when supported
+          # workers: 2
+
+    #   - ubuntu-26.04-amd64:
+    #       password: ubuntu
+    #       workers: 2
+
 suites:
-  spread/general/:
+  tests/spread/:
     summary: General integration tests
 
     environment:
-      SHARED_LIBRARIES: $PROJECT_PATH/spread/lib
-      PATH: $PATH:$SHARED_LIBRARIES
-      TMPDIR: $PROJECT_PATH/spread/tmp
+      SHARED_LIBRARIES: $SPREAD_PATH/tests/spread/lib
+      PATH: $PATH:$SPREAD_PATH:$SHARED_LIBRARIES
+      TMPDIR: $SPREAD_PATH/tests/spread/tmp
 
     prepare: |
-      sudo snap install docker
+      SPREAD_ENV_FILE="$SPREAD_PATH/spread.env"
 
-      # For 'rockcraft.skopeo'
-      sudo snap install --classic rockcraft
+      IMAGE_NAME="spread-test-rust"
+      echo "export IMAGE_NAME=$IMAGE_NAME" >> $SPREAD_ENV_FILE
 
-      # Wait for docker daemon to come online
-      sudo apt install --yes retry
-      retry --times=10 --delay 2 -- docker images
-      sudo apt remove --yes retry
+      # ensure there is only one rock file
+      rocks_found=$(ls $SPREAD_PATH/rust*.rock | wc -l)
+      if [ "$rocks_found" -ne 1 ]; then
+        echo "Expected exactly one craft artifact, found $rocks_found"
+        exit 1
+      fi
+      CRAFT_ARTIFACT=$(ls $SPREAD_PATH/rust*.rock)
+      echo "export CRAFT_ARTIFACT=$CRAFT_ARTIFACT" >> $SPREAD_ENV_FILE
 
-      # Load the rock into docker
-      sudo rockcraft.skopeo \
-        --insecure-policy copy \
+      skopeo --insecure-policy copy \
         "oci-archive:$CRAFT_ARTIFACT" \
-        docker-daemon:rust-rock:latest
-      
-      # Install moreutils package for 'sponge' command
-      sudo apt update
-      sudo apt install --yes moreutils
+        docker-daemon:$IMAGE_NAME:latest
 
-      # Make the tmp directory
       mkdir -p "$TMPDIR"
 
     restore: |
-      docker image rm --force rust-rock:latest
-
-exclude:
-  - .git
+      source "$SPREAD_PATH/spread.env"
+      docker image rm $IMAGE_NAME:latest --force || true
 
 kill-timeout: 1h

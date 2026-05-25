@@ -4,6 +4,9 @@ name: Build and Publish Rocks
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'r[0-9]*'  # revision tags: r1, r2, r10, ...
 
 env:
   REGISTRY: ghcr.io
@@ -35,6 +38,39 @@ jobs:
         with:
           name: rust_1.93_${{ matrix.arch }}
           path: rust/1.93-26.04/*.rock
+
+  test:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    needs: build-per-arch
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download arm64 rock
+        uses: actions/download-artifact@v6
+        with:
+          name: rust_1.93_arm64
+          path: rust/1.93-26.04/
+
+      - name: Install spread + skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+          go install github.com/snapcore/spread/cmd/spread@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Build sshd test image (arm64 only)
+        run: |
+          cd rust/1.93-26.04
+          make build-test-image PLATFORMS=arm64
+
+      - name: Run spread tests
+        run: |
+          cd rust/1.93-26.04
+          # ensure rock is newer than .rock.stamp so make does not repack
+          touch rust_1.93_*.rock
+          spread
 
   build-multiarch:
     runs-on: ubuntu-24.04
@@ -74,7 +110,7 @@ jobs:
   publish-ghcr:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    needs: build-multiarch
+    needs: [build-multiarch, test]
     permissions:
       contents: read
       packages: write

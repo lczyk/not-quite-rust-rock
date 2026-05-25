@@ -49,7 +49,7 @@ parts:
       - git
     build-snaps:
       - chisel
-    override-build: bash "$CRAFT_PROJECT_DIR/rust_override_build.sh"
+    override-build: bash "$CRAFT_PROJECT_DIR/hack/rust_override_build.sh"
 
   not-quite-cargo:
     plugin: go

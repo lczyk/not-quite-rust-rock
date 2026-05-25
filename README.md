@@ -9,7 +9,7 @@ The rock does **not** ship `cargo` or `apt`. Builds happen in two stages: a plan
 ## Pulling the image
 
 ```bash
-docker pull ghcr.io/lczyk/not-quite-rust-rock/rust:1.93
+docker pull ghcr.io/lczyk/not-quite-rust-rock/rust:1.93-26.04
 ```
 
 ## Available versions

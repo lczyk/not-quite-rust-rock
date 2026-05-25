@@ -26,6 +26,14 @@ rust_1.93.rock: rockcraft.yaml
 test: rust_1.93.rock  ## Run tests
 	spread
 
+.PHONY: size
+size:  ## Show size of rust_1.93.rock if present
+	@if [ -f rust_1.93.rock ]; then \
+		du -h rust_1.93.rock | cut -f1; \
+	else \
+		echo "rust_1.93.rock not built"; \
+	fi
+
 .PHONY: clean
 clean:  ## Remove all built images
 # 	@$(foreach arch,$(PLATFORMS), \

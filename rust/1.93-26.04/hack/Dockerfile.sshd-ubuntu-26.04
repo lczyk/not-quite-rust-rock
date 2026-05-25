@@ -12,6 +12,7 @@ RUN apt-get update && \
     mkdir /var/run/sshd || true && \
     echo 'root:ubuntu' | chpasswd && \
     echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
+    sed -i 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # when we log in through spread, we expect these to be present

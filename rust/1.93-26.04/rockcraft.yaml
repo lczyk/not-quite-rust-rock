@@ -69,4 +69,3 @@ parts:
       make -C go build
       install -D -m 0755 go/bin/not-quite-cargo \
         "$CRAFT_PART_INSTALL"/usr/bin/not-quite-cargo
-      ln -s not-quite-cargo "$CRAFT_PART_INSTALL"/usr/bin/cargo

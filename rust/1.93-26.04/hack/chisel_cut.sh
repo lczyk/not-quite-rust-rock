@@ -36,12 +36,15 @@ for attempt in $(seq 1 "$N_RETRIES"); do
     fi
 
     matched=""
+    matched_line=""
     for p in "${PATTERNS[@]}"; do
-        if printf '%s' "$err" | grep -qF "$p"; then matched=$p; break; fi
+        line=$(printf '%s\n' "$err" | grep -F "$p" | head -n1) || true
+        if [ -n "$line" ]; then matched=$p; matched_line=$line; break; fi
     done
 
     if [ -n "$matched" ] && [ "$attempt" -lt "$N_RETRIES" ]; then
         echo "chisel cut failed (attempt $attempt/$N_RETRIES): $matched. Retrying in ${RETRY_DELAY}s..." >&2
+        echo "  > $matched_line" >&2
         sleep "$RETRY_DELAY"
         continue
     fi

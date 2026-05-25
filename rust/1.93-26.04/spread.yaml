@@ -31,6 +31,10 @@ suites:
       PATH: $PATH:$SPREAD_PATH:$SHARED_LIBRARIES
       TMPDIR: $SPREAD_PATH/tests/spread/tmp
       IMAGE_NAME: spread-test-rust
+      # host-side path that backs /rust inside this test container,
+      # so bind mounts to inner containers (via shared docker socket)
+      # can be translated to a path the host docker daemon sees.
+      SPREAD_WORKDIR_HOST: /tmp/spread-rust
 
     prepare: |
       SPREAD_ENV_FILE="$SPREAD_PATH/spread.env"

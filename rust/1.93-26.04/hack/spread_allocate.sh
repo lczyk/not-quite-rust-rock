@@ -9,6 +9,24 @@ function main() {
     random_suffix=$(head /dev/urandom | tr -dc a-f0-9 | head -c8)
     container_name="${SPREAD_SYSTEM}-${random_suffix}"
 
+    # Host dir bound to /rust inside the test container. Spread syncs
+    # the project into /rust; mounting from the host means inner
+    # containers spawned via the shared docker socket can bind-mount
+    # the same content -- after translating the /rust prefix to the
+    # host path (see SPREAD_WORKDIR_HOST in spread.yaml + to_host in
+    # tests/spread/lib/common.sh).
+    # Single fixed path because workers=1; revisit if workers grow.
+    workdir="/tmp/spread-rust"
+    # Inner containers (via shared docker socket) run as root by
+    # default; files written to the bind mount end up root-owned on
+    # the host. A previous run's leftovers cannot be removed as the
+    # host user, so nuke via a throwaway container that runs as root.
+    if [ -d "$workdir" ]; then
+        docker run --rm -v "$workdir:/x" --entrypoint sh "$image" -c 'rm -rf /x/* /x/.[!.]* /x/..?* 2>/dev/null || true'
+    fi
+    rm -rf "$workdir" 2>/dev/null || true
+    mkdir -p "$workdir"
+
     # remove any existing container with the same name
     docker rm -f $container_name 2>/dev/null || true
 
@@ -17,6 +35,8 @@ function main() {
         --platform "linux/$arch" \
         --privileged \
         -v /var/run/docker.sock:/var/run/docker.sock \
+        -v "$workdir:/rust" \
+        --label "spread.workdir=$workdir" \
         -e DEBIAN_FRONTEND=noninteractice \
         -e "usr=$SPREAD_SYSTEM_USERNAME" \
         -e "pass=$SPREAD_SYSTEM_PASSWORD" \

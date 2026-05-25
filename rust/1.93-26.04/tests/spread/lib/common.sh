@@ -4,24 +4,31 @@ set -eux
 
 source defer.sh
 
-# Launch a docker container with the given name prefix
-# Mount the current directory as read-only at /work
-# The container is removed on script exit
+# Translate a /rust/... path (inside this test container) to the
+# equivalent path on the host docker daemon. Needed because the
+# docker socket is shared with the host -- bind mounts resolve there,
+# not against this container's filesystem.
+function to_host() {
+    local p="$1"
+    printf '%s' "${p/#\/rust/$SPREAD_WORKDIR_HOST}"
+}
+
+# Launch a rock-under-test container. The name is `test_container`,
+# suffixed with $1 if given (e.g. `test_container_fd`). The work dir
+# ($2, defaulting to $(pwd)) is bind-mounted at /work read-write
+# (path translated for the host daemon via to_host). Echoes the
+# container name on stdout.
+#
+# Cleanup is the caller's job -- defer does not fire at function exit,
+# only at script exit. Pair every call with:
+#   defer "docker rm --force $name &>/dev/null || true" EXIT
 function launch_container() {
     local name="test_container"
     [ -n "${1:-}" ] && name="${name}_$1"
     local work="$(pwd)"
     [ -n "${2:-}" ] && work="$2"
     docker rm -f "$name" &>/dev/null || true
-    # NOTE: bind-mount would not work here -- this script runs inside the
-    #       sshd test container, but `docker` talks to the host daemon via
-    #       the mounted socket, so `$work` does not exist on the docker
-    #       host. Use `docker cp` instead.
-    docker create --name "$name" "$IMAGE_NAME:latest" > /dev/null
-    docker cp "$work/." "$name:/work"
+    docker create --name "$name" -v "$(to_host "$work"):/work" "$IMAGE_NAME:latest" > /dev/null
     docker start "$name" &>/dev/null || true
     echo "$name"
-    # NOTE: defer does not run at the end of the function, but it does
-    #       if launch_container is called from the subshell
-    # defer "docker rm --force $name &>/dev/null || true" EXIT
 }

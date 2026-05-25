@@ -42,7 +42,8 @@ docker start "$name" &>/dev/null || true
 
 # 4. patch + run via not-quite-cargo (no cargo in the rock at all)
 docker exec --workdir /work "$name" not-quite-cargo patch \
-    --project-root=/work --cargo-home=/cargo --inplace build-plan.json
+    --project-root=/work --cargo-home=/cargo \
+    --linker=/usr/bin/cc --inplace build-plan.json
 docker exec --workdir /work "$name" not-quite-cargo run build-plan.json
 
 # 5. verify built binary works -- install onto the spread test host

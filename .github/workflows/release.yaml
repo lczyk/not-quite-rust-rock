@@ -35,12 +35,17 @@ jobs:
           name: rust_1.93
           path: artifacts
 
-      - name: Download per-arch rocks
-        uses: actions/download-artifact@v6
-        with:
-          pattern: rust_1.93_*
-          path: artifacts
-          merge-multiple: true
+      # Per-arch tags disabled -- the multiarch manifest already embeds
+      # both per-arch images via content-addressing, so a plain
+      # `docker pull rust:1.93` picks the right arch. Re-enable both
+      # this step and the per-arch skopeo copies below if explicit
+      # `rust:1.93-amd64` / `rust:1.93-arm64` tags are wanted.
+      # - name: Download per-arch rocks
+      #   uses: actions/download-artifact@v6
+      #   with:
+      #     pattern: rust_1.93_*
+      #     path: artifacts
+      #     merge-multiple: true
 
       - name: Install Skopeo
         run: |
@@ -54,11 +59,13 @@ jobs:
             --multi-arch=all \
             oci-archive:artifacts/rust_1.93.rock \
             docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93
-          skopeo copy \
-            --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-            oci-archive:artifacts/rust_1.93_amd64.rock \
-            docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-amd64
-          skopeo copy \
-            --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-            oci-archive:artifacts/rust_1.93_arm64.rock \
-            docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-arm64
+          # Per-arch tags disabled; see comment above the per-arch
+          # download step. Re-enable both at once if needed.
+          # skopeo copy \
+          #   --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+          #   oci-archive:artifacts/rust_1.93_amd64.rock \
+          #   docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-amd64
+          # skopeo copy \
+          #   --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+          #   oci-archive:artifacts/rust_1.93_arm64.rock \
+          #   docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-arm64

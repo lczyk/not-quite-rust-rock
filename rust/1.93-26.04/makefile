@@ -8,13 +8,16 @@ help:
 DOCKER ?= docker
 PLATFORMS := amd64 arm64
 
-.PHONY: build-test-image
-build-test-image: hack/Dockerfile.sshd-ubuntu-26.04  ## Build test image for sshd-ubuntu-26.04
+.test-image.stamp: hack/Dockerfile.sshd-ubuntu-26.04
 	@$(foreach arch,$(PLATFORMS), \
 		$(DOCKER) build \
 			--tag sshd-ubuntu-26.04-$(arch) \
 			--file $< \
 			--platform linux/$(arch) . ; )
+	@touch $@
+
+.PHONY: build-test-image
+build-test-image: .test-image.stamp  ## Build test image if Dockerfile changed
 
 .PHONY: build
 build: rust_1.93.rock  ## Build rust rock package
@@ -31,7 +34,7 @@ rust_1.93.rock: .rock.stamp
 	rockcraft pack --verbosity=debug --debug
 	mv rust_1.93_*.rock rust_1.93.rock
 
-test: rust_1.93.rock  ## Run tests
+test: rust_1.93.rock .test-image.stamp  ## Run tests
 	spread
 
 .PHONY: size
@@ -46,7 +49,8 @@ size:  ## Show size of rust_1.93.rock if present
 clean-test-image:  ## Remove sshd-ubuntu-26.04 test images
 	@$(foreach arch,$(PLATFORMS), \
 		$(DOCKER) rmi -f sshd-ubuntu-26.04-$(arch) || true ; )
+	rm -f .test-image.stamp
 
 .PHONY: clean
 clean:  ## Remove all built artifacts
-	rm -f rust_1.93.rock .rock.stamp
+	rm -f rust_1.93.rock .rock.stamp .test-image.stamp

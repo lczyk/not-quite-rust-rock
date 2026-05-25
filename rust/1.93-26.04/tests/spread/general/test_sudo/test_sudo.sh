@@ -44,6 +44,6 @@ docker exec --workdir /work "$name" cargo test \
 
 # Run the built binary to verify it works
 docker exec -t "$name" /work/target/debug/sudo --help \
-    | sponge | grep -q "sudo - run commands as another user"
+    | grep -q "sudo - run commands as another user"
 docker exec -t "$name" /work/target/debug/sudo --version \
-    | sponge | grep -q "sudo-rs 0.2.8"
+    | grep -q "sudo-rs 0.2.8"

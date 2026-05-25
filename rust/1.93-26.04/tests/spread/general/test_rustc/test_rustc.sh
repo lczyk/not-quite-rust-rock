@@ -12,4 +12,4 @@ defer "docker rm --force $name &>/dev/null || true" EXIT
 
 docker exec "$name" rustc /work/hello.rs -o /tmp/hello
 docker exec "$name" /tmp/hello \
-    | sponge | grep -q "Hello from Rust!"
+    | grep -q "Hello from Rust!"

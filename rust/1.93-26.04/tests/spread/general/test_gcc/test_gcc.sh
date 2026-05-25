@@ -10,4 +10,4 @@ defer "docker rm --force $name &>/dev/null || true" EXIT
 
 docker exec "$name" gcc /work/hello.c -o /tmp/hello
 docker exec "$name" /tmp/hello \
-    | sponge | grep -q "Hello from C!"
+    | grep -q "Hello from C!"

@@ -41,8 +41,8 @@ docker exec --workdir /work "$name" cargo test \
 
 # # Run the built binary to verify it works
 docker exec "$name" /work/target/debug/fd --help 2>&1 \
-    | sponge | head -n1 | grep -q "A program to find entries in your filesystem"
+    | head -n1 | grep -q "A program to find entries in your filesystem"
 docker exec "$name" /work/target/debug/fd --version \
-    | sponge | grep -q "fd 9.0.0"
+    | grep -q "fd 9.0.0"
 docker exec --workdir / "$name" /work/target/debug/fd --color never libc.so.6 \
-    | sponge | grep -q "libc.so.6"
+    | grep -q "libc.so.6"

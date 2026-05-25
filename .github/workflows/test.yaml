@@ -2,24 +2,35 @@ name: Test
 
 # spellchecker: ignore skopeo
 
-# Reusable: runs spread against the arm64 rock. Expects the build
-# workflow has already run in the same workflow run and uploaded
-# the rust_1.93_arm64 artefact.
+# Reusable: runs spread against the per-arch rocks. Each runner stays
+# native (no qemu) -- amd64 runner exercises the amd64 rock against the
+# ubuntu-26.04-amd64 spread system; arm64 runner does the arm64 pair.
+# Expects the build workflow has already run in the same workflow run
+# and uploaded the rust_1.93_<arch> artefacts.
 on:
   workflow_call:
 
 jobs:
   spread:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Download arm64 rock
+      - name: Download ${{ matrix.arch }} rock
         uses: actions/download-artifact@v6
         with:
-          name: rust_1.93_arm64
+          name: rust_1.93_${{ matrix.arch }}
           path: rust/1.93-26.04/
 
       - name: Install spread + skopeo
@@ -29,14 +40,14 @@ jobs:
           go install github.com/canonical/spread/cmd/spread@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
-      - name: Build sshd test image (arm64 only)
+      - name: Build sshd test image (${{ matrix.arch }} only)
         run: |
           cd rust/1.93-26.04
-          make build-test-image PLATFORMS=arm64
+          make build-test-image PLATFORMS=${{ matrix.arch }}
 
-      - name: Run spread tests
+      - name: Run spread tests (${{ matrix.arch }})
         run: |
           cd rust/1.93-26.04
           # ensure rock is newer than .rock.stamp so make does not repack
           touch rust_1.93_*.rock
-          spread
+          spread craft-adhoc:ubuntu-26.04-${{ matrix.arch }}

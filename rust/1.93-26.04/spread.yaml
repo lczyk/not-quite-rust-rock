@@ -20,10 +20,10 @@ backends:
           password: ubuntu
           # TODO(lczyk): Enable multiple workers when supported
           # workers: 2
-
-    #   - ubuntu-26.04-amd64:
-    #       password: ubuntu
-    #       workers: 2
+      - ubuntu-26.04-amd64:
+          password: ubuntu
+          # TODO(lczyk): Enable multiple workers when supported
+          # workers: 2
 
 suites:
   tests/spread/general/:

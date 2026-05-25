@@ -40,12 +40,6 @@ parts:
     plugin: nil
     stage-packages:
       - rustc-1.93_rustc
-      # ar is needed to create static libraries, which cargo sometimes does
-      # when building dependencies
-      - binutils_archiver
-      # cargo needs ca-certificates to be able to download crates.io index
-      # + its required in SDK rocks
-      - ca-certificates_data
       # we want the base-files_chisel to generate the chisel manifest, and
       # base-files_release-info  to indicate that this is a 26.04 rock
       - base-files_chisel

@@ -1,0 +1,64 @@
+name: Release
+
+# spellchecker: ignore skopeo creds
+
+# Build + test + publish to ghcr on push of a revision tag (r1, r2, ...).
+on:
+  push:
+    tags:
+      - 'r[0-9]*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+
+  test:
+    needs: build
+    uses: ./.github/workflows/test.yaml
+
+  publish-ghcr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [build, test]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Download multiarch rock
+        uses: actions/download-artifact@v6
+        with:
+          name: rust_1.93
+          path: artifacts
+
+      - name: Download per-arch rocks
+        uses: actions/download-artifact@v6
+        with:
+          pattern: rust_1.93_*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Install Skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      # - name: Publish to GitHub Container Registry
+      #   run: |
+      #     skopeo copy \
+      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+      #       --multi-arch=all \
+      #       oci-archive:artifacts/rust_1.93.rock \
+      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93
+      #     skopeo copy \
+      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+      #       oci-archive:artifacts/rust_1.93_amd64.rock \
+      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-amd64
+      #     skopeo copy \
+      #       --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+      #       oci-archive:artifacts/rust_1.93_arm64.rock \
+      #       docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-arm64

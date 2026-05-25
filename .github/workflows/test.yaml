@@ -1,0 +1,42 @@
+name: Test
+
+# spellchecker: ignore skopeo
+
+# Reusable: runs spread against the arm64 rock. Expects the build
+# workflow has already run in the same workflow run and uploaded
+# the rust_1.93_arm64 artefact.
+on:
+  workflow_call:
+
+jobs:
+  spread:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download arm64 rock
+        uses: actions/download-artifact@v6
+        with:
+          name: rust_1.93_arm64
+          path: rust/1.93-26.04/
+
+      - name: Install spread + skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+          go install github.com/snapcore/spread/cmd/spread@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Build sshd test image (arm64 only)
+        run: |
+          cd rust/1.93-26.04
+          make build-test-image PLATFORMS=arm64
+
+      - name: Run spread tests
+        run: |
+          cd rust/1.93-26.04
+          # ensure rock is newer than .rock.stamp so make does not repack
+          touch rust_1.93_*.rock
+          spread

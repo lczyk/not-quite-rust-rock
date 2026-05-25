@@ -54,3 +54,20 @@ parts:
       # this is not the default rustc for this base, so we just need to
       # create the symlink for the rustc binary
       ln -s rustc-1.93 "$CRAFT_PART_INSTALL"/usr/bin/rustc
+
+  not-quite-cargo:
+    plugin: nil
+    after: [rust]
+    source: https://github.com/lczyk/not-quite-cargo.git
+    source-type: git
+    build-snaps:
+      - go
+    build-packages:
+      - make
+      - git
+      - upx-ucl
+    override-build: |
+      make -C go build
+      install -D -m 0755 go/bin/not-quite-cargo \
+        "$CRAFT_PART_INSTALL"/usr/bin/not-quite-cargo
+      ln -s not-quite-cargo "$CRAFT_PART_INSTALL"/usr/bin/cargo

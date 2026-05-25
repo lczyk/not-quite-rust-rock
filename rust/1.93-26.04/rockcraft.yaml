@@ -8,9 +8,9 @@ description: |
     performance and reliability.
 
     This image is a chiselled Ubuntu rock based on Ubuntu 26.04. It contains
-    a minimal Rust 1.93 toolchain and Cargo build system which can be used to
-    build a wide variety of Rust applications. It also includes a minimal
-    GCC toolchain to custom build steps in Cargo builds.
+    a minimal Rust 1.93 toolchain which can be used to build a wide variety
+    of Rust applications. It also includes a minimal GCC toolchain for
+    custom build steps.
 
     Any additional dependencies can be mounted at runtime.
 
@@ -39,7 +39,7 @@ parts:
   rust:
     plugin: nil
     stage-packages:
-      - cargo-1.93_cargo  # includes rustc-1.93
+      - rustc-1.93_rustc
       # ar is needed to create static libraries, which cargo sometimes does
       # when building dependencies
       - binutils_archiver
@@ -51,7 +51,6 @@ parts:
       - base-files_chisel
       - base-files_release-info
     override-build: |
-      # this is not the default rust and cargo for this base, so we just need to
-      # create the symlinks for the rust and cargo binaries
-      ln -s cargo-1.93 "$CRAFT_PART_INSTALL"/usr/bin/cargo
+      # this is not the default rustc for this base, so we just need to
+      # create the symlink for the rustc binary
       ln -s rustc-1.93 "$CRAFT_PART_INSTALL"/usr/bin/rustc

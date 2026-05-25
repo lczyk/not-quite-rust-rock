@@ -30,12 +30,10 @@ suites:
       SHARED_LIBRARIES: $SPREAD_PATH/tests/spread/lib
       PATH: $PATH:$SPREAD_PATH:$SHARED_LIBRARIES
       TMPDIR: $SPREAD_PATH/tests/spread/tmp
+      IMAGE_NAME: spread-test-rust
 
     prepare: |
       SPREAD_ENV_FILE="$SPREAD_PATH/spread.env"
-
-      IMAGE_NAME="spread-test-rust"
-      echo "export IMAGE_NAME=$IMAGE_NAME" >> $SPREAD_ENV_FILE
 
       # ensure there is only one rock file
       rocks_found=$(ls $SPREAD_PATH/rust*.rock | wc -l)

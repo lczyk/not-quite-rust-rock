@@ -9,6 +9,8 @@
 # Spread
 .craft-spread*/
 .spread-reuse*
+spread.env
+tests/spread/tmp/
 
 # IDE
 .vs_code/

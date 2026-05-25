@@ -6,6 +6,9 @@ exclude:
   - .github
   - .git
   - .vscode
+  - tests/spread/tmp
+  - "*.stamp"
+  - ".*.stamp"
 
 backends:
   craft-adhoc:

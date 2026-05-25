@@ -1,5 +1,6 @@
 # rock
 *.rock
+.rock.stamp
 
 # OS Files
 .DS_store

@@ -19,8 +19,16 @@ build-test-image: hack/Dockerfile.sshd-ubuntu-26.04  ## Build test image for ssh
 .PHONY: build
 build: rust_1.93.rock  ## Build rust rock package
 
-rust_1.93.rock: rockcraft.yaml
-	rockcraft clean && rockcraft pack --verbosity=debug --debug
+.PHONY: FORCE
+FORCE:
+
+.rock.stamp: FORCE
+	@new=$$(hack/hash_inputs.sh) ; \
+		cur=$$(cat $@ 2>/dev/null || true) ; \
+		[ "$$new" = "$$cur" ] || echo "$$new" > $@
+
+rust_1.93.rock: .rock.stamp
+	rockcraft pack --verbosity=debug --debug
 	mv rust_1.93_*.rock rust_1.93.rock
 
 test: rust_1.93.rock  ## Run tests
@@ -34,9 +42,11 @@ size:  ## Show size of rust_1.93.rock if present
 		echo "rust_1.93.rock not built"; \
 	fi
 
+.PHONY: clean-test-image
+clean-test-image:  ## Remove sshd-ubuntu-26.04 test images
+	@$(foreach arch,$(PLATFORMS), \
+		$(DOCKER) rmi -f sshd-ubuntu-26.04-$(arch) || true ; )
+
 .PHONY: clean
-clean:  ## Remove all built images
-# 	@$(foreach arch,$(PLATFORMS), \
-# 		$(DOCKER) rmi -f sshd-ubuntu-26.04-$(arch) || true ; )
-# 	@docker system prune -f
-	rm -f rust_1.93.rock
+clean:  ## Remove all built artifacts
+	rm -f rust_1.93.rock .rock.stamp

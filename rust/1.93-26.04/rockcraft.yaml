@@ -19,7 +19,7 @@ description: |
 
     Any additional dependencies can be mounted at runtime.
 
-# rust and cargo are dual licensed under MIT or Apache-2.0
+# rust is dual licensed under MIT or Apache-2.0
 # https://www.rust-lang.org/policies/licenses
 # the GCC toolchain included in this rock is licensed under GPL-3.0
 # https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html

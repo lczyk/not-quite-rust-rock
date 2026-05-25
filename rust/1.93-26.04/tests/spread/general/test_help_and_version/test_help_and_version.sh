@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 
-## TESTS 
+## TESTS
 # spellchecker: ignore rustc
 
-# cargo
-docker run --rm rust-rock:latest exec cargo --help \
-    | sponge | grep -q "Rust's package manager"
-docker run --rm rust-rock:latest exec cargo --version \
-    | sponge | grep -q 'cargo 1.93'
+# not-quite-cargo
+docker run --rm "$IMAGE_NAME:latest" exec not-quite-cargo --help \
+    | grep -q "Available commands"
+docker run --rm "$IMAGE_NAME:latest" exec not-quite-cargo --version \
+    | grep -q '^not-quite-cargo '
 
 # rust
-docker run --rm rust-rock:latest exec rustc --help \
-    | sponge | grep -q "Usage: rustc"
-docker run --rm rust-rock:latest exec rustc --version \
-    | sponge | grep -q 'rustc 1.93'
+docker run --rm "$IMAGE_NAME:latest" exec rustc --help \
+    | grep -q "Usage: rustc"
+docker run --rm "$IMAGE_NAME:latest" exec rustc --version \
+    | grep -q 'rustc 1.93'
 
 # gcc
-docker run --rm rust-rock:latest exec gcc --help \
-    | sponge | grep -q "Usage: gcc"
-docker run --rm rust-rock:latest exec gcc --version \
-    | sponge | head -n1 | grep -q 'gcc (Ubuntu 15'
+docker run --rm "$IMAGE_NAME:latest" exec gcc --help \
+    | grep -q "Usage: gcc"
+docker run --rm "$IMAGE_NAME:latest" exec gcc --version \
+    | head -n1 | grep -q 'gcc (Ubuntu 15'

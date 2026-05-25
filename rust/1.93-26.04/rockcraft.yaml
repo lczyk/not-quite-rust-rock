@@ -8,9 +8,14 @@ description: |
     performance and reliability.
 
     This image is a chiselled Ubuntu rock based on Ubuntu 26.04. It contains
-    a minimal Rust 1.93 toolchain which can be used to build a wide variety
-    of Rust applications. It also includes a minimal GCC toolchain for
-    custom build steps.
+    a minimal Rust 1.93 toolchain (rustc only -- no cargo), a minimal GCC
+    toolchain for custom build steps, and `not-quite-cargo`, a small
+    replayer that builds rust projects from a pre-generated cargo
+    `--build-plan` -- see https://github.com/lczyk/not-quite-cargo.
+
+    Typical use: generate the build plan in any image that ships cargo,
+    then replay it inside this rock with `not-quite-cargo run` (with the
+    network off, no cargo present).
 
     Any additional dependencies can be mounted at runtime.
 

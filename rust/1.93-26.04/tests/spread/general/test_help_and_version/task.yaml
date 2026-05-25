@@ -1,2 +1,2 @@
-summary: Help and version flag tests for rust, not-quite-cargo and gcc
+summary: Help and version flag tests for rust and not-quite-cargo
 execute: bash -ex test_help_and_version.sh

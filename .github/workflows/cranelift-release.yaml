@@ -9,7 +9,9 @@ name: cranelift-Release
 on:
   push:
     tags:
-      - 'cranelift-*'
+      # `**` matches `/` -- needed for tags like cranelift-1.93/r2.
+      # bare `*` would only match cranelift-1.93 (no slash).
+      - 'cranelift-**'
   workflow_dispatch:
 
 jobs:

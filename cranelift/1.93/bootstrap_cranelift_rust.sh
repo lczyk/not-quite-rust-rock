@@ -57,7 +57,12 @@ echo "[bootstrap] cloning rust@${RUST_TAG} into ${WORK}"
 mkdir -p "$WORK"
 cd "$WORK"
 if [ ! -d rust ]; then
-    git clone --depth 1 --branch "$RUST_TAG" --recurse-submodules \
+    # No --recurse-submodules -- x.py lazily inits only the
+    # submodules it actually needs. avoids cloning ~6 doc repos,
+    # cargo, enzyme, rustc-perf, the gcc backend, and (with
+    # download-ci-llvm = true) src/llvm-project. saves several
+    # minutes of CI clone time.
+    git clone --depth 1 --branch "$RUST_TAG" \
         https://github.com/rust-lang/rust.git
 fi
 cd rust

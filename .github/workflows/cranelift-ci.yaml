@@ -1,0 +1,32 @@
+name: cranelift-CI
+run-name: cranelift-CI for ${{ github.ref }}
+
+# Build + test on PR (when cranelift artefacts change) and on push
+# to main. No publishing -- cranelift-release.yaml handles that
+# on tag push.
+
+on:
+  pull_request:
+    paths:
+      - 'cranelift/**'
+      - '.github/workflows/cranelift-*.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'cranelift/**'
+      - '.github/workflows/cranelift-*.yaml'
+  workflow_dispatch:
+
+# Cancel an in-flight run on the same ref when a newer one starts.
+concurrency:
+  group: cranelift-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/cranelift-build.yaml
+
+  test:
+    needs: build
+    uses: ./.github/workflows/cranelift-test.yaml

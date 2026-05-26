@@ -1,0 +1,114 @@
+name: cranelift-test
+
+# Reusable workflow: lightweight correctness checks against the
+# dist tarballs produced by cranelift-build.yaml.
+#
+# Three gates per arch:
+#   1. install -- run rust-installer's install.sh against a
+#      throwaway prefix.
+#   2. readelf -- the INSTALLED librustc_driver.so must have no
+#      libLLVM in DT_NEEDED (re-check after install layout).
+#   3. smoke -- rustc --version, compile + run a tiny program
+#      that exercises println!, Vec, iterator sum.
+#
+# The heavy cg_clif testsuite (4448 tests, needs the full bootstrap
+# build tree) runs in cranelift-build.yaml instead -- the build
+# tree is ~10 GB and not worth shipping as an artefact.
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    needs: []
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            triple: x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            triple: aarch64-unknown-linux-gnu
+
+    steps:
+      - name: Install runtime deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xz-utils binutils libgcc-s1 libc6
+
+      - name: Download tarballs
+        uses: actions/download-artifact@v6
+        with:
+          name: cranelift-tarballs-${{ matrix.arch }}
+          path: dist-in
+
+      - name: Verify sha256
+        run: |
+          set -euo pipefail
+          cd dist-in
+          for f in *.tar.xz.sha256; do
+              sha256sum -c "$f"
+          done
+
+      - name: Install rustc + rust-std (rust-installer) and cranelift (manual)
+        id: install
+        run: |
+          set -euo pipefail
+          prefix="$RUNNER_TEMP/rust-cranelift-install"
+          mkdir -p "$prefix"
+
+          # rustc + rust-std are produced by x.py dist with the
+          # rust-installer layout (install.sh inside). cranelift
+          # tarball is hand-packed by cranelift-build.yaml as a
+          # plain layout under lib/rustlib/<triple>/codegen-backends/
+          # -- extract it directly into the prefix.
+          for f in dist-in/*.tar.xz; do
+              base=$(basename "$f" .tar.xz)
+              if [[ "$base" == rustc-codegen-cranelift-* ]]; then
+                  tar -xJf "$f" -C "$prefix"
+              else
+                  tar -xJf "$f" -C "$RUNNER_TEMP"
+                  d="$RUNNER_TEMP/$base"
+                  "$d/install.sh" --prefix="$prefix" --disable-ldconfig --verbose
+              fi
+          done
+          echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+          ls "$prefix/bin"
+          find "$prefix/lib" -name 'librustc_driver-*.so'
+          find "$prefix/lib" -name 'librustc_codegen_cranelift-*.so'
+
+      - name: Verification gate -- installed librustc_driver has no libLLVM
+        run: |
+          set -euo pipefail
+          driver=$(find "${{ steps.install.outputs.prefix }}/lib" -name 'librustc_driver-*.so' | head -n1)
+          test -n "$driver" || { echo "no librustc_driver after install" >&2; exit 1; }
+          if readelf -dW "$driver" | grep -qi 'NEEDED.*libLLVM'; then
+              echo "FAIL: installed $driver has libLLVM in DT_NEEDED" >&2
+              readelf -dW "$driver" | grep NEEDED >&2
+              exit 1
+          fi
+          echo "OK: $driver has no libLLVM dependency"
+          readelf -dW "$driver" | grep NEEDED
+
+      - name: Smoke -- rustc --version + hello world
+        run: |
+          set -euo pipefail
+          rustc="${{ steps.install.outputs.prefix }}/bin/rustc"
+          "$rustc" --version
+
+          tmp=$(mktemp -d)
+          cat > "$tmp/hello.rs" <<'EOF'
+          fn main() {
+              let v: Vec<i32> = (0..10).collect();
+              let sum: i32 = v.iter().sum();
+              println!("sum={}", sum);
+          }
+          EOF
+          "$rustc" -o "$tmp/hello" "$tmp/hello.rs"
+          out=$("$tmp/hello")
+          [ "$out" = "sum=45" ] || { echo "FAIL: expected sum=45, got '$out'" >&2; exit 1; }
+          echo "OK: smoke pass ($out)"

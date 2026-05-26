@@ -4,9 +4,15 @@ run-name: CI for ${{ github.ref }}
 # Build + test on PR and on push to main. No publishing.
 on:
   pull_request:
+    paths-ignore:
+      - 'cranelift/**'
+      - '.github/workflows/cranelift-*.yaml'
   push:
     branches:
       - main
+    paths-ignore:
+      - 'cranelift/**'
+      - '.github/workflows/cranelift-*.yaml'
   workflow_dispatch:
 
 # Cancel an in-flight run on the same ref when a newer one starts

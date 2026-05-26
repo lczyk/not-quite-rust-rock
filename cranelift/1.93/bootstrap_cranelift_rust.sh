@@ -80,11 +80,13 @@ change-id = "ignore"
 profile = "dist"
 
 [llvm]
-# we never want LLVM in the shipped rustc. stage0 will still have
-# LLVM (it's a downloaded upstream toolchain) but the stage1 rustc
-# we build + ship has no LLVM linkage when codegen-backends only
-# lists cranelift below.
-download-ci-llvm = false
+# pull precompiled LLVM from rust-lang's CI. rustc_llvm crate has
+# FFI bindings that need libLLVM at compile time of stage1, even
+# though our stage1 codegen-backends below excludes llvm so the
+# shipped librustc_driver does not link libLLVM. downloading saves
+# ~30 minutes vs compiling from source. correctness unchanged --
+# the readelf gate later still confirms no libLLVM in DT_NEEDED.
+download-ci-llvm = true
 
 [build]
 # Native arch only -- cross targets need their own gcc toolchains

@@ -61,6 +61,16 @@ size:  ## Show size of rust_1.93-26.04.rock if present
 		echo "rust_1.93-26.04.rock not built"; \
 	fi
 
+.PHONY: ls-rock
+ls-rock: rust_1.93-26.04.rock  ## List the rock filesystem (skopeo -> docker export -> tar tv)
+	@tag=rust-ls-rock-$$$$ ; \
+		skopeo --insecure-policy copy oci-archive:rust_1.93-26.04.rock \
+		    docker-daemon:$$tag:latest > /dev/null ; \
+		cid=$$($(DOCKER) create $$tag:latest) ; \
+		$(DOCKER) export $$cid | tar tv ; \
+		$(DOCKER) rm $$cid > /dev/null ; \
+		$(DOCKER) rmi $$tag:latest > /dev/null
+
 .PHONY: clean-test-image
 clean-test-image:  ## Remove sshd-ubuntu-26.04 test images
 	@$(foreach arch,$(PLATFORMS), \

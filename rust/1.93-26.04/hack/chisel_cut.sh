@@ -3,14 +3,14 @@
 # errors. Patterns lifted from canonical/chisel-releases'
 # .github/scripts/install-slices/install_slices.py.
 #
-# Usage: chisel_cut.sh <slice> [<slice> ...]
+# Usage: chisel_cut.sh <release-dir> <slice> [<slice> ...]
 # Requires:
-#   - cwd to be a chisel-releases checkout (so `--release ./` works)
+#   - <release-dir> to be a chisel-releases checkout
 #   - $CRAFT_PART_INSTALL to be set (rockcraft env)
 set -e
 
 N_RETRIES=10
-RETRY_DELAY=30
+RETRY_DELAY=60
 PATTERNS=(
     # https://github.com/canonical/chisel-releases/issues/765
     "cannot fetch from archive"
@@ -22,12 +22,15 @@ PATTERNS=(
     "expected digest"
 )
 
-[ "$#" -gt 0 ] || { echo "no slices given" >&2; exit 1; }
+[ "$#" -ge 2 ] || { echo "usage: $0 <release-dir> <slice> [<slice> ...]" >&2; exit 1; }
 [ -n "${CRAFT_PART_INSTALL:-}" ] || { echo "CRAFT_PART_INSTALL unset" >&2; exit 1; }
+
+release_dir=$1
+shift
 
 for attempt in $(seq 1 "$N_RETRIES"); do
     err=$(chisel cut \
-            --release ./ \
+            --release "$release_dir" \
             --root "$CRAFT_PART_INSTALL" \
             "$@" 2>&1) && rc=0 || rc=$?
     if [ "$rc" -eq 0 ]; then

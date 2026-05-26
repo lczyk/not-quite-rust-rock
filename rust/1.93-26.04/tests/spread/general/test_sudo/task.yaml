@@ -1,0 +1,2 @@
+summary: Build sudo-rs against the rock and verify the binary runs
+execute: bash -ex test_sudo.sh

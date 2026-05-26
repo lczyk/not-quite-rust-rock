@@ -107,6 +107,11 @@ extended = false
 tools = []
 
 [rust]
+# channel = "dev" enables unstable features at bootstrap time --
+# required for rustc_codegen_cranelift to be packaged into a dist
+# tarball (gated behind unstable_features() in dist.rs:1600).
+# without this, dist silently produces no cranelift tarball.
+channel = "dev"
 # THE key flag -- drops LLVM as a codegen backend from the shipped
 # rustc. librustc_driver will not DT_NEEDED libLLVM.
 codegen-backends = ["cranelift"]

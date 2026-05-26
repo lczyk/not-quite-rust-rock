@@ -50,6 +50,39 @@ parts:
     build-snaps:
       - chisel
     override-build: bash "$CRAFT_PROJECT_DIR/hack/rust_override_build.sh"
+    # Drop bits the rock never uses:
+    #   - static archives (everything links dynamically through wild
+    #     / nqc-driver). Keep the linker scripts (libc.so / libm.a-as
+    #     -script) and libc_nonshared.a which libc.so references.
+    #   - crt objects for variants we never produce: Mcrt1/gcrt1/grcrt1
+    #     are profiling, rcrt1/crtbeginT are static-PIE / static, the
+    #     crtfastmath / crtoffload* are gcc niche features.
+    #   - libtest.rlib (rust test framework) -- big and not needed in
+    #     a rock that only builds release binaries. Saves ~21 MB.
+    prime:
+      - "*"
+      # static archives that the dynamic-link path never touches.
+      # Carve-outs to keep:
+      #   - dummy 8-byte stubs (libutil.a, libpthread.a, libdl.a,
+      #     librt.a, libanl.a, libg.a, libpthread_nonshared.a) --
+      #     linker names so `-lutil` / `-lpthread` / etc resolve to
+      #     libc.so.6 symbols
+      #   - libc_nonshared.a -- referenced by the libc.so linker script
+      #   - libgcc.a -- referenced by the libgcc_s.so linker script's
+      #     `GROUP(libgcc_s.so.1 -lgcc)`, so `-lgcc` must resolve
+      - "-usr/lib/*-linux-*/libc.a"
+      - "-usr/lib/*-linux-*/libm-2.*.a"
+      - "-usr/lib/*-linux-*/libmvec.a"
+      # unused crt variants
+      - "-usr/lib/*-linux-*/Mcrt1.o"
+      - "-usr/lib/*-linux-*/gcrt1.o"
+      - "-usr/lib/*-linux-*/grcrt1.o"
+      - "-usr/lib/*-linux-*/rcrt1.o"
+      - "-usr/lib/gcc/*-linux-*/14/crtbeginT.o"
+      - "-usr/lib/gcc/*-linux-*/14/crtfastmath.o"
+      - "-usr/lib/gcc/*-linux-*/14/crtoffload*.o"
+      # rust test framework (~21 MB)
+      - "-usr/lib/rust-1.93/lib/rustlib/*-linux-*/lib/libtest-*.rlib"
 
   wild:
     plugin: nil

@@ -54,22 +54,32 @@ jobs:
               sha256sum -c "$f"
           done
 
-      - name: Install via rust-installer install.sh
+      - name: Install rustc + rust-std (rust-installer) and cranelift (manual)
         id: install
         run: |
           set -euo pipefail
           prefix="$RUNNER_TEMP/rust-cranelift-install"
           mkdir -p "$prefix"
+
+          # rustc + rust-std are produced by x.py dist with the
+          # rust-installer layout (install.sh inside). cranelift
+          # tarball is hand-packed by cranelift-build.yaml as a
+          # plain layout under lib/rustlib/<triple>/codegen-backends/
+          # -- extract it directly into the prefix.
           for f in dist-in/*.tar.xz; do
-              tar -xJf "$f" -C "$RUNNER_TEMP"
-          done
-          for d in "$RUNNER_TEMP"/{rustc,rust-std,rustc-codegen-cranelift}-*; do
-              [ -d "$d" ] || continue
-              "$d/install.sh" --prefix="$prefix" --disable-ldconfig --verbose
+              base=$(basename "$f" .tar.xz)
+              if [[ "$base" == rustc-codegen-cranelift-* ]]; then
+                  tar -xJf "$f" -C "$prefix"
+              else
+                  tar -xJf "$f" -C "$RUNNER_TEMP"
+                  d="$RUNNER_TEMP/$base"
+                  "$d/install.sh" --prefix="$prefix" --disable-ldconfig --verbose
+              fi
           done
           echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
           ls "$prefix/bin"
           find "$prefix/lib" -name 'librustc_driver-*.so'
+          find "$prefix/lib" -name 'librustc_codegen_cranelift-*.so'
 
       - name: Verification gate -- installed librustc_driver has no libLLVM
         run: |

@@ -107,13 +107,17 @@ extended = false
 tools = []
 
 [rust]
-# channel = "dev" enables unstable features at bootstrap time --
-# required for rustc_codegen_cranelift to be packaged into a dist
-# tarball (gated behind unstable_features() in dist.rs:1600).
-# without this, dist silently produces no cranelift tarball.
-channel = "dev"
 # THE key flag -- drops LLVM as a codegen backend from the shipped
 # rustc. librustc_driver will not DT_NEEDED libLLVM.
+#
+# channel stays default (stable). channel = "dev" would let
+# x.py dist produce a cranelift tarball (it's gated behind
+# unstable_features() in dist.rs:1600), but dev also enables
+# nightly-only paths in compiler-builtins that emit `asm! sym`
+# operands -- which cranelift cannot lower. so we keep stable
+# here and package the cranelift .so manually after bootstrap
+# (see the `Add cranelift codegen tarball` step in
+# cranelift-build.yaml).
 codegen-backends = ["cranelift"]
 debug = false
 debug-assertions = false

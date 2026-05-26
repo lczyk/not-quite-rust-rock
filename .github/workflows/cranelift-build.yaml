@@ -75,6 +75,37 @@ jobs:
           cd "$RUNNER_TEMP/rust-cranelift-bootstrap/rust"
           ./x.py test --stage 1 compiler/rustc_codegen_cranelift
 
+      - name: Package cranelift codegen backend manually
+        # x.py dist intentionally drops the cranelift tarball on
+        # the stable channel (gated behind unstable_features() in
+        # dist.rs:1600). flipping to channel = "dev" would unlock
+        # it but also breaks compiler-builtins on aarch64 (asm!
+        # sym operands cranelift cannot lower). so we keep stable
+        # and tar the codegen-backends/librustc_codegen_cranelift-*
+        # .so by hand. tarball layout matches the install prefix
+        # the test workflow extracts into directly (no install.sh
+        # -- this is a single-file payload).
+        run: |
+          set -euo pipefail
+          ver="${{ inputs.rust-version }}"
+          triple="${{ matrix.triple }}"
+          src="$RUNNER_TEMP/rust-cranelift-bootstrap/rust"
+          clif=$(find "$src/build/$triple/stage1/lib/rustlib/$triple/codegen-backends" \
+              -name 'librustc_codegen_cranelift-*.so' | head -n1)
+          test -n "$clif" || { echo "no cranelift .so produced" >&2; exit 1; }
+
+          # layout inside tarball:
+          #   lib/rustlib/<triple>/codegen-backends/librustc_codegen_cranelift-*.so
+          # extracted directly under the prefix the rust-installer
+          # install.sh used for rustc + rust-std.
+          staging="$RUNNER_TEMP/clif-pkg"
+          rel="lib/rustlib/$triple/codegen-backends"
+          mkdir -p "$staging/$rel"
+          cp "$clif" "$staging/$rel/"
+
+          pkg="rustc-codegen-cranelift-$ver-$triple"
+          tar -cJf "$src/build/dist/$pkg.tar.xz" -C "$staging" .
+
       - name: Collect dist tarballs + sha256 sidecars
         run: |
           set -euo pipefail

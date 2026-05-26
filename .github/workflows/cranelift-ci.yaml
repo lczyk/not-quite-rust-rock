@@ -28,4 +28,5 @@ jobs:
     uses: ./.github/workflows/cranelift-build.yaml
 
   test:
+    needs: build
     uses: ./.github/workflows/cranelift-test.yaml

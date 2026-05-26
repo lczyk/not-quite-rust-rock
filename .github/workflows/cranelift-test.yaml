@@ -1,35 +1,28 @@
 name: cranelift-test
 
-# Reusable workflow: runs correctness tests against the
-# cranelift-bootstrapped rust toolchain. Two layers:
+# Reusable workflow: lightweight correctness checks against the
+# dist tarballs produced by cranelift-build.yaml.
 #
-#   1. readelf gate -- librustc_driver.so must have no libLLVM
-#      in DT_NEEDED (otherwise our whole spike is for nothing).
-#   2. smoke -- rustc --version, compile + run a tiny program
+# Three gates per arch:
+#   1. install -- run rust-installer's install.sh against a
+#      throwaway prefix.
+#   2. readelf -- the INSTALLED librustc_driver.so must have no
+#      libLLVM in DT_NEEDED (re-check after install layout).
+#   3. smoke -- rustc --version, compile + run a tiny program
 #      that exercises println!, Vec, iterator sum.
-#   3. cg_clif testsuite -- ./x.py test --stage 1
-#      compiler/rustc_codegen_cranelift. exercises cranelift's
-#      intrinsic lowering, atomic fallback, panic glue, etc.
-#      4448 tests pass locally on aarch64; gate strictly.
 #
-# Skipped: std/core unit tests (./x.py test library/std
-# library/core). Has 2 known cranelift-incompatible failures
-# (f16 intrinsics missing in Ubuntu libgcc; #[linkage="extern_weak"]
-# unimplemented on cranelift aarch64). Documented out-of-tree.
+# The heavy cg_clif testsuite (4448 tests, needs the full bootstrap
+# build tree) runs in cranelift-build.yaml instead -- the build
+# tree is ~10 GB and not worth shipping as an artefact.
 
 on:
   workflow_call:
-    inputs:
-      rust-version:
-        description: rust version under test (e.g. 1.93.0)
-        required: false
-        type: string
-        default: '1.93.0'
 
 jobs:
   test:
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 240
+    timeout-minutes: 15
+    needs: []
     strategy:
       fail-fast: false
       matrix:
@@ -42,48 +35,49 @@ jobs:
             triple: aarch64-unknown-linux-gnu
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install test deps
+      - name: Install runtime deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-              build-essential cmake ninja-build \
-              python3 git curl pkg-config \
-              libssl-dev xz-utils binutils
+          sudo apt-get install -y xz-utils binutils libgcc-s1 libc6
 
-      - name: Rebuild bootstrap for tests
-        # x.py test needs the full bootstrap build tree, not just the
-        # dist tarballs. Re-running the bootstrap is the simplest way
-        # to get a populated build/ dir; with stage0 + ccache fresh
-        # in this runner it would be a duplicate spend, so we just
-        # accept the cost. (cranelift releases rarely.)
-        env:
-          RUST_TAG: ${{ inputs.rust-version }}
-        run: |
-          bash cranelift/1.93/bootstrap_cranelift_rust.sh \
-              "$RUNNER_TEMP/rust-cranelift-bootstrap"
+      - name: Download tarballs
+        uses: actions/download-artifact@v6
+        with:
+          name: cranelift-tarballs-${{ matrix.arch }}
+          path: dist-in
 
-      - name: Locate stage1 outputs
-        id: locate
+      - name: Verify sha256
         run: |
           set -euo pipefail
-          src="$RUNNER_TEMP/rust-cranelift-bootstrap/rust"
-          driver=$(find "$src/build" -path '*/stage1/lib/librustc_driver-*.so' | head -n1)
-          rustc="$src/build/${{ matrix.triple }}/stage1/bin/rustc"
-          test -n "$driver" || { echo "no librustc_driver" >&2; exit 1; }
-          test -x "$rustc"   || { echo "no stage1 rustc"   >&2; exit 1; }
-          echo "src=$src"       >> "$GITHUB_OUTPUT"
-          echo "driver=$driver" >> "$GITHUB_OUTPUT"
-          echo "rustc=$rustc"   >> "$GITHUB_OUTPUT"
+          cd dist-in
+          for f in *.tar.xz.sha256; do
+              sha256sum -c "$f"
+          done
 
-      - name: Verification gate -- librustc_driver has no libLLVM
+      - name: Install via rust-installer install.sh
+        id: install
         run: |
           set -euo pipefail
-          driver="${{ steps.locate.outputs.driver }}"
+          prefix="$RUNNER_TEMP/rust-cranelift-install"
+          mkdir -p "$prefix"
+          for f in dist-in/*.tar.xz; do
+              tar -xJf "$f" -C "$RUNNER_TEMP"
+          done
+          for d in "$RUNNER_TEMP"/{rustc,rust-std,rustc-codegen-cranelift}-*; do
+              [ -d "$d" ] || continue
+              "$d/install.sh" --prefix="$prefix" --disable-ldconfig --verbose
+          done
+          echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+          ls "$prefix/bin"
+          find "$prefix/lib" -name 'librustc_driver-*.so'
+
+      - name: Verification gate -- installed librustc_driver has no libLLVM
+        run: |
+          set -euo pipefail
+          driver=$(find "${{ steps.install.outputs.prefix }}/lib" -name 'librustc_driver-*.so' | head -n1)
+          test -n "$driver" || { echo "no librustc_driver after install" >&2; exit 1; }
           if readelf -dW "$driver" | grep -qi 'NEEDED.*libLLVM'; then
-              echo "FAIL: $driver has libLLVM in DT_NEEDED" >&2
+              echo "FAIL: installed $driver has libLLVM in DT_NEEDED" >&2
               readelf -dW "$driver" | grep NEEDED >&2
               exit 1
           fi
@@ -93,7 +87,7 @@ jobs:
       - name: Smoke -- rustc --version + hello world
         run: |
           set -euo pipefail
-          rustc="${{ steps.locate.outputs.rustc }}"
+          rustc="${{ steps.install.outputs.prefix }}/bin/rustc"
           "$rustc" --version
 
           tmp=$(mktemp -d)
@@ -108,10 +102,3 @@ jobs:
           out=$("$tmp/hello")
           [ "$out" = "sum=45" ] || { echo "FAIL: expected sum=45, got '$out'" >&2; exit 1; }
           echo "OK: smoke pass ($out)"
-
-      - name: cg_clif testsuite (./x.py test --stage 1 compiler/rustc_codegen_cranelift)
-        env:
-          CG_CLIF_FORCE_GNU_AS: '1'
-        run: |
-          cd "${{ steps.locate.outputs.src }}"
-          ./x.py test --stage 1 compiler/rustc_codegen_cranelift

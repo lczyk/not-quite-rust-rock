@@ -1,18 +1,15 @@
 name: cranelift-build
 
 # Reusable workflow: bootstraps rust from source w/
-# `codegen-backends = ["cranelift"]` for amd64 + arm64, uploads
-# the resulting dist tarballs (rustc + rust-std +
-# rustc-codegen-cranelift) plus .sha256 sidecars as workflow
-# artefacts. Called by cranelift-ci.yaml on PR / push main and by
-# cranelift-release.yaml on tag push.
+# `codegen-backends = ["cranelift"]` for amd64 + arm64, runs the
+# heavyweight tests that need the in-tree build tree, then uploads
+# the dist tarballs + sha256 sidecars as workflow artefacts.
 #
-# Long-running -- ~5-10 min per arch wall clock, runs in parallel.
-# No publish step here; cranelift-release.yaml handles that.
-#
-# Artefact names:
-#   cranelift-tarballs-amd64 -> rustc-*-x86_64-unknown-linux-gnu.tar.xz + sha256
-#   cranelift-tarballs-arm64 -> rustc-*-aarch64-unknown-linux-gnu.tar.xz + sha256
+# Tests that live here (rather than cranelift-test.yaml) need the
+# full bootstrap build tree (~10 GB) which is too large to ship as
+# an artefact -- so we keep them in-job alongside the build that
+# produced the tree. Lightweight checks (install + smoke + readelf
+# on the installed driver) stay in cranelift-test.yaml.
 
 on:
   workflow_call:
@@ -48,7 +45,7 @@ jobs:
           sudo apt-get install -y \
               build-essential cmake ninja-build \
               python3 git curl pkg-config \
-              libssl-dev xz-utils
+              libssl-dev xz-utils binutils
 
       - name: Bootstrap rust w/ cranelift-only codegen
         env:
@@ -56,6 +53,27 @@ jobs:
         run: |
           bash cranelift/1.93/bootstrap_cranelift_rust.sh \
               "$RUNNER_TEMP/rust-cranelift-bootstrap"
+
+      - name: Verify librustc_driver has no libLLVM
+        run: |
+          set -euo pipefail
+          driver=$(find "$RUNNER_TEMP/rust-cranelift-bootstrap/rust/build" \
+              -path '*/stage1/lib/librustc_driver-*.so' | head -n1)
+          test -n "$driver" || { echo "no librustc_driver" >&2; exit 1; }
+          if readelf -dW "$driver" | grep -qi 'NEEDED.*libLLVM'; then
+              echo "FAIL: $driver has libLLVM in DT_NEEDED" >&2
+              readelf -dW "$driver" | grep NEEDED >&2
+              exit 1
+          fi
+          echo "OK: $driver has no libLLVM dependency"
+          readelf -dW "$driver" | grep NEEDED
+
+      - name: cg_clif testsuite
+        env:
+          CG_CLIF_FORCE_GNU_AS: '1'
+        run: |
+          cd "$RUNNER_TEMP/rust-cranelift-bootstrap/rust"
+          ./x.py test --stage 1 compiler/rustc_codegen_cranelift
 
       - name: Collect dist tarballs + sha256 sidecars
         run: |

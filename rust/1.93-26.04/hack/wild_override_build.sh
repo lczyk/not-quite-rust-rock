@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # override-build for the `wild` part: download a prebuilt wild linker
 # tarball for the build-for arch, drop the binary at /usr/bin/wild,
-# add an `ld -> wild` symlink, and install hack/cc_wild_shim.sh as
-# /usr/bin/cc so rustc's default cc-driver linker invocation works
-# without shipping gcc. See cc_wild_shim.sh for the rewrite details.
+# add an `ld -> wild` symlink, and a `cc -> not-quite-cargo` symlink
+# so rustc's default cc-driver linker invocation routes into nqc's
+# built-in driver (see the driver package in not-quite-cargo, ships
+# in v0.8.0+). nqc translates the gcc-style args into raw ld-style
+# and exec's whatever /usr/bin/ld points at -- here, wild.
 
 set -euo pipefail
 
@@ -28,9 +30,10 @@ install -m 755 \
     "$CRAFT_PART_INSTALL/usr/bin/wild"
 ln -s wild "$CRAFT_PART_INSTALL/usr/bin/ld"
 
-install -m 755 \
-    "$CRAFT_PROJECT_DIR/hack/cc_wild_shim.sh" \
-    "$CRAFT_PART_INSTALL/usr/bin/cc"
+# /usr/bin/cc -> not-quite-cargo. The not-quite-cargo binary lives
+# in the sibling `not-quite-cargo` part; at prime time both parts
+# merge into the rock root so this relative symlink resolves.
+ln -s not-quite-cargo "$CRAFT_PART_INSTALL/usr/bin/cc"
 
 # Surface the gcc-14 linker script libgcc_s.so under the standard
 # library search path so wild's `-lgcc_s` resolves. The script itself

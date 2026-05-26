@@ -1,0 +1,77 @@
+name: cranelift-build
+
+# Reusable workflow: bootstraps rust from source w/
+# `codegen-backends = ["cranelift"]` for amd64 + arm64, uploads
+# the resulting dist tarballs (rustc + rust-std +
+# rustc-codegen-cranelift) plus .sha256 sidecars as workflow
+# artefacts. Called by cranelift-ci.yaml on PR / push main and by
+# cranelift-release.yaml on tag push.
+#
+# Long-running -- ~5-10 min per arch wall clock, runs in parallel.
+# No publish step here; cranelift-release.yaml handles that.
+#
+# Artefact names:
+#   cranelift-tarballs-amd64 -> rustc-*-x86_64-unknown-linux-gnu.tar.xz + sha256
+#   cranelift-tarballs-arm64 -> rustc-*-aarch64-unknown-linux-gnu.tar.xz + sha256
+
+on:
+  workflow_call:
+    inputs:
+      rust-version:
+        description: rust release tag to bootstrap (e.g. 1.93.0)
+        required: false
+        type: string
+        default: '1.93.0'
+
+jobs:
+  bootstrap:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            triple: x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            triple: aarch64-unknown-linux-gnu
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install bootstrap deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+              build-essential cmake ninja-build \
+              python3 git curl pkg-config \
+              libssl-dev xz-utils
+
+      - name: Bootstrap rust w/ cranelift-only codegen
+        env:
+          RUST_TAG: ${{ inputs.rust-version }}
+        run: |
+          bash cranelift/1.93/bootstrap_cranelift_rust.sh \
+              "$RUNNER_TEMP/rust-cranelift-bootstrap"
+
+      - name: Collect dist tarballs + sha256 sidecars
+        run: |
+          set -euo pipefail
+          mkdir -p dist-out
+          cp "$RUNNER_TEMP/rust-cranelift-bootstrap/rust/build/dist/"*.tar.xz dist-out/
+          cd dist-out
+          for f in *.tar.xz; do
+              sha256sum "$f" > "$f.sha256"
+          done
+          ls -la
+
+      - name: Upload tarballs as workflow artefact
+        uses: actions/upload-artifact@v6
+        with:
+          name: cranelift-tarballs-${{ matrix.arch }}
+          path: |
+            dist-out/*.tar.xz
+            dist-out/*.tar.xz.sha256

@@ -1,0 +1,47 @@
+name: cranelift-Release
+
+# Build + test + publish to a github release on push of a
+# cranelift revision tag (cranelift-<major.minor>/r<rev>, e.g.
+# cranelift-1.93/r1).
+#
+# Mirrors the shape of release.yaml for the LLVM rock.
+
+on:
+  push:
+    tags:
+      - 'cranelift-*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/cranelift-build.yaml
+
+  test:
+    uses: ./.github/workflows/cranelift-test.yaml
+
+  publish-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [build, test]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download tarballs (amd64 + arm64)
+        uses: actions/download-artifact@v6
+        with:
+          pattern: cranelift-tarballs-*
+          path: artefacts
+          merge-multiple: true
+
+      - name: List artefacts
+        run: ls -la artefacts/
+
+      - name: Attach to github release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            artefacts/*.tar.xz
+            artefacts/*.tar.xz.sha256
+          fail_on_unmatched_files: true
+          generate_release_notes: true

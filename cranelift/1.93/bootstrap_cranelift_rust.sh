@@ -57,12 +57,15 @@ echo "[bootstrap] cloning rust@${RUST_TAG} into ${WORK}"
 mkdir -p "$WORK"
 cd "$WORK"
 if [ ! -d rust ]; then
+    # depth 2 (not 1) so bootstrap's git rev-parse HEAD^1 works
+    # -- config.rs:1784 unwraps that call on every build, and
+    # --depth 1 would leave HEAD with no parent.
     # No --recurse-submodules -- x.py lazily inits only the
     # submodules it actually needs. avoids cloning ~6 doc repos,
     # cargo, enzyme, rustc-perf, the gcc backend, and (with
     # download-ci-llvm = true) src/llvm-project. saves several
     # minutes of CI clone time.
-    git clone --depth 1 --branch "$RUST_TAG" \
+    git clone --depth 2 --branch "$RUST_TAG" \
         https://github.com/rust-lang/rust.git
 fi
 cd rust

@@ -10,11 +10,14 @@ The rock does **not** ship `cargo` or `apt`. Builds happen in two stages: a plan
 
 ```bash
 docker pull ghcr.io/lczyk/not-quite-rust-rock/rust:1.93-26.04
+# cranelift-only variant (no libLLVM linkage):
+docker pull ghcr.io/lczyk/not-quite-rust-rock/rust:1.93.cranelift-26.04
 ```
 
 ## Available versions
 
-* [Rust 1.93 (Ubuntu 26.04)](./rust/1.93-26.04/rockcraft.yaml)
+* [Rust 1.93 (Ubuntu 26.04)](./rust/1.93-26.04/rockcraft.yaml) -- LLVM-based `rustc`, chiselled from Ubuntu's `rustc-1.93` deb.
+* [Rust 1.93 cranelift (Ubuntu 26.04)](./rust/1.93.cranelift-26.04/rockcraft.yaml) -- same toolchain built with the cranelift codegen backend instead of LLVM (`librustc_driver` has no libLLVM linkage), pulled from the published cranelift release.
 
 ## Building locally
 

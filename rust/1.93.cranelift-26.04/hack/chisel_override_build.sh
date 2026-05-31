@@ -6,9 +6,11 @@
 #
 # Unlike the LLVM rock this does NOT cut rustc-1.93 -- rustc, rust-std
 # and the cranelift codegen backend come from the published cranelift
-# release (see hack/cranelift_override_build.sh). The libc6 + libgcc-s1
-# slices the LLVM rock got transitively via rustc-1.93 are listed here
-# explicitly.
+# release (see hack/cranelift_override_build.sh). The slices the LLVM
+# rock got transitively via rustc-1.93 are listed here explicitly:
+# libc6 + libgcc-s1 (runtime libs) and base-files_tmp (the /tmp dir
+# rustc needs for codegen scratch -- without it every compile fails
+# with "couldn't create a temp dir").
 #
 # `chisel cut` is wrapped in hack/chisel_cut.sh to retry on the
 # intermittent "expected digest ..." flake from the ubuntu archive.
@@ -27,4 +29,5 @@ bash "$CRAFT_PROJECT_DIR/hack/chisel_cut.sh" \
     libc6_libs \
     libgcc-s1_libs \
     base-files_chisel \
-    base-files_release-info
+    base-files_release-info \
+    base-files_tmp

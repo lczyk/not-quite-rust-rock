@@ -1,0 +1,2 @@
+summary: rustc is the cranelift-only build (no LLVM backend)
+execute: bash -ex test_cranelift.sh

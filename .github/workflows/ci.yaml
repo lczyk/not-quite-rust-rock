@@ -7,12 +7,16 @@ on:
     paths-ignore:
       - 'cranelift/**'
       - '.github/workflows/cranelift-*.yaml'
+      - 'rust/1.93.cranelift-26.04/**'
+      - '.github/workflows/*-cranelift-rock.yaml'
   push:
     branches:
       - main
     paths-ignore:
       - 'cranelift/**'
       - '.github/workflows/cranelift-*.yaml'
+      - 'rust/1.93.cranelift-26.04/**'
+      - '.github/workflows/*-cranelift-rock.yaml'
   workflow_dispatch:
 
 # Cancel an in-flight run on the same ref when a newer one starts
@@ -24,7 +28,11 @@ concurrency:
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
+    with:
+      version: '1.93-26.04'
 
   test:
     needs: build
     uses: ./.github/workflows/test.yaml
+    with:
+      version: '1.93-26.04'

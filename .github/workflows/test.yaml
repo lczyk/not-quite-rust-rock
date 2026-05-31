@@ -4,9 +4,17 @@ name: Test
 # native (no qemu) -- amd64 runner exercises the amd64 rock against the
 # ubuntu-26.04-amd64 spread system; arm64 runner does the arm64 pair.
 # Expects the build workflow has already run in the same workflow run
-# and uploaded the rust_1.93-26.04_<arch> artefacts.
+# and uploaded the rust_<version>_<arch> artefacts.
+#
+# Parametrised by `version` (see build.yaml) so the same workflow tests
+# both the LLVM rock and the cranelift rock.
 on:
   workflow_call:
+    inputs:
+      version:
+        description: rock version / dir under rust/ (e.g. 1.93-26.04)
+        required: true
+        type: string
 
 jobs:
   spread:
@@ -28,8 +36,8 @@ jobs:
       - name: Download ${{ matrix.arch }} rock
         uses: actions/download-artifact@v6
         with:
-          name: rust_1.93-26.04_${{ matrix.arch }}
-          path: rust/1.93-26.04/
+          name: rust_${{ inputs.version }}_${{ matrix.arch }}
+          path: rust/${{ inputs.version }}/
 
       - name: Install spread + skopeo
         run: |
@@ -40,12 +48,12 @@ jobs:
 
       - name: Build sshd test image (${{ matrix.arch }} only)
         run: |
-          cd rust/1.93-26.04
+          cd rust/${{ inputs.version }}
           make build-test-image PLATFORMS=${{ matrix.arch }}
 
       - name: Run spread tests (${{ matrix.arch }})
         run: |
-          cd rust/1.93-26.04
+          cd rust/${{ inputs.version }}
           # ensure rock is newer than .rock.stamp so make does not repack
-          touch rust_1.93-26.04_*.rock
+          touch rust_${{ inputs.version }}_*.rock
           spread craft-adhoc:ubuntu-26.04-${{ matrix.arch }}

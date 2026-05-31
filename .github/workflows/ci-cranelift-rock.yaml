@@ -1,0 +1,39 @@
+name: CI (cranelift rock)
+run-name: cranelift-rock CI for ${{ github.ref }}
+
+# Build + test the cranelift rock on PR and on push to main, scoped to
+# the cranelift rock dir + its own workflows. Reuses the parametrised
+# build.yaml / test.yaml (version input). No publishing -- release.yaml
+# ships both rocks together on the `r<n>` tag.
+on:
+  pull_request:
+    paths:
+      - 'rust/1.93.cranelift-26.04/**'
+      - '.github/workflows/ci-cranelift-rock.yaml'
+      - '.github/workflows/build.yaml'
+      - '.github/workflows/test.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'rust/1.93.cranelift-26.04/**'
+      - '.github/workflows/ci-cranelift-rock.yaml'
+      - '.github/workflows/build.yaml'
+      - '.github/workflows/test.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cranelift-rock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+    with:
+      version: '1.93.cranelift-26.04'
+
+  test:
+    needs: build
+    uses: ./.github/workflows/test.yaml
+    with:
+      version: '1.93.cranelift-26.04'

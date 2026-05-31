@@ -1,6 +1,15 @@
 name: Release
 
-# Build + test + publish to ghcr on push of a revision tag (r1, r2, ...).
+# Build + test + publish BOTH rocks to ghcr on push of a revision tag
+# (r1, r2, ...). One repo-wide REVISION governs both rocks, so a single
+# tag ships both:
+#   - rust:1.93-26.04            (LLVM rock)
+#   - rust:1.93.cranelift-26.04  (cranelift rock)
+#
+# The from-source cranelift toolchain *artefact* (the tarballs the
+# cranelift rock consumes) is released separately by
+# cranelift-release.yaml on the `cranelift-**` tag -- different cadence,
+# and the rock pins a specific artefact revision internally.
 on:
   push:
     tags:
@@ -11,39 +20,49 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  build:
+  build-llvm:
     uses: ./.github/workflows/build.yaml
+    with:
+      version: '1.93-26.04'
 
-  test:
-    needs: build
+  test-llvm:
+    needs: build-llvm
     uses: ./.github/workflows/test.yaml
+    with:
+      version: '1.93-26.04'
+
+  build-cranelift:
+    uses: ./.github/workflows/build.yaml
+    with:
+      version: '1.93.cranelift-26.04'
+
+  test-cranelift:
+    needs: build-cranelift
+    uses: ./.github/workflows/test.yaml
+    with:
+      version: '1.93.cranelift-26.04'
 
   publish-ghcr:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    needs: [build, test]
+    needs: [test-llvm, test-cranelift]
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Download multiarch rock
+      # exact names (not patterns) so only the multiarch oci-archives
+      # land, not the per-arch artefacts (rust_..._amd64 / _arm64).
+      - name: Download LLVM multiarch rock
         uses: actions/download-artifact@v6
         with:
           name: rust_1.93-26.04
           path: artifacts
-
-      # Per-arch tags disabled -- the multiarch manifest already embeds
-      # both per-arch images via content-addressing, so a plain
-      # `docker pull rust:1.93-26.04` picks the right arch. Re-enable
-      # both this step and the per-arch skopeo copies below if explicit
-      # `rust:1.93-26.04-amd64` / `rust:1.93-26.04-arm64` tags are wanted.
-      # - name: Download per-arch rocks
-      #   uses: actions/download-artifact@v6
-      #   with:
-      #     pattern: rust_1.93-26.04_*
-      #     path: artifacts
-      #     merge-multiple: true
+      - name: Download cranelift multiarch rock
+        uses: actions/download-artifact@v6
+        with:
+          name: rust_1.93.cranelift-26.04
+          path: artifacts
 
       - name: Install Skopeo
         run: |
@@ -57,13 +76,8 @@ jobs:
             --multi-arch=all \
             oci-archive:artifacts/rust_1.93-26.04.rock \
             docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-26.04
-          # Per-arch tags disabled; see comment above the per-arch
-          # download step. Re-enable both at once if needed.
-          # skopeo copy \
-          #   --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-          #   oci-archive:artifacts/rust_1.93-26.04_amd64.rock \
-          #   docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-26.04-amd64
-          # skopeo copy \
-          #   --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-          #   oci-archive:artifacts/rust_1.93-26.04_arm64.rock \
-          #   docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93-26.04-arm64
+          skopeo copy \
+            --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+            --multi-arch=all \
+            oci-archive:artifacts/rust_1.93.cranelift-26.04.rock \
+            docker://${{ env.REGISTRY }}/${{ github.repository }}/rust:1.93.cranelift-26.04

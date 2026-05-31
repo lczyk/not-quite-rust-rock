@@ -1,0 +1,147 @@
+name: rust
+version: '1.93.cranelift-26.04'
+summary: Chiseled cranelift-only rust 1.93 rock
+description: |
+    Rust is a modern memory-safe systems programming language focused on
+    performance and reliability.
+
+    This image is a chiselled Ubuntu rock based on Ubuntu 26.04. It contains
+    a minimal Rust 1.93 toolchain (rustc only -- no cargo), built with the
+    cranelift codegen backend instead of LLVM: the shipped `librustc_driver`
+    has no libLLVM linkage and cranelift is the only (hence default) codegen
+    backend. It also ships a minimal GCC toolchain for custom build steps and
+    `not-quite-cargo`, a small replayer that builds rust projects from a
+    pre-generated cargo `--build-plan` -- see
+    https://github.com/lczyk/not-quite-cargo.
+
+    Unlike the LLVM rock (which chisels Ubuntu's `rustc-1.93` deb), this rock
+    pulls the from-source cranelift-only toolchain published as a github
+    release (tag cranelift-1.93/r<rev>) by the cranelift-build workflow.
+
+    Typical use: generate the build plan in any image that ships cargo,
+    then replay it inside this rock with `not-quite-cargo run` (with the
+    network off, no cargo present).
+
+    Any additional dependencies can be mounted at runtime.
+
+# rust is dual licensed under MIT or Apache-2.0
+# https://www.rust-lang.org/policies/licenses
+# the GCC toolchain included in this rock is licensed under GPL-3.0
+# https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
+
+# commended out since rockcraft does not support license expressions
+# https://github.com/canonical/rockcraft/issues/978
+# license: (MIT OR Apache-2.0) AND GPL-3.0
+
+base: bare
+# TODO(lczyk): Change the build-base to ubuntu@26.04 once it goes stable
+build-base: devel
+
+platforms:
+  amd64:
+  arm64:
+
+# https://doc.rust-lang.org/cargo/reference/environment-variables.html
+environment:
+  CARGO_HOME: /cargo
+
+parts:
+  # The GCC + libc toolchain bits the rock needs for linking. Chiselled
+  # from chisel-releases by hand (via the retry-on-flaky-archive wrapper)
+  # rather than rockcraft's stage-packages flow, which has no retries and
+  # trips on intermittent "expected digest ..." errors.
+  #
+  # NOTE: unlike the LLVM rock, this part does NOT cut rustc-1.93 -- the
+  # rustc + rust-std + cranelift backend come from the published cranelift
+  # release instead (see the `cranelift` part). So libc6 + libgcc-s1, which
+  # the LLVM rock got transitively via the rustc-1.93 slice, are listed
+  # explicitly inside hack/chisel_override_build.sh.
+  chisel:
+    plugin: nil
+    build-packages:
+      - git
+    build-snaps:
+      - chisel
+    override-build: bash "$CRAFT_PROJECT_DIR/hack/chisel_override_build.sh"
+    # Drop bits the rock never uses (the C-runtime half -- the rust half
+    # is carved in the `cranelift` part):
+    #   - static archives (everything links dynamically through wild
+    #     / nqc-driver). Keep the linker scripts (libc.so / libm.a-as
+    #     -script) and libc_nonshared.a which libc.so references.
+    #   - crt objects for variants we never produce: Mcrt1/gcrt1/grcrt1
+    #     are profiling, rcrt1/crtbeginT are static-PIE / static, the
+    #     crtfastmath / crtoffload* are gcc niche features.
+    prime:
+      - "*"
+      # static archives that the dynamic-link path never touches.
+      # Carve-outs to keep:
+      #   - dummy 8-byte stubs (libutil.a, libpthread.a, libdl.a,
+      #     librt.a, libanl.a, libg.a, libpthread_nonshared.a) --
+      #     linker names so `-lutil` / `-lpthread` / etc resolve to
+      #     libc.so.6 symbols
+      #   - libc_nonshared.a -- referenced by the libc.so linker script
+      #   - libgcc.a -- referenced by the libgcc_s.so linker script's
+      #     `GROUP(libgcc_s.so.1 -lgcc)`, so `-lgcc` must resolve
+      - "-usr/lib/*-linux-*/libc.a"
+      - "-usr/lib/*-linux-*/libm-2.*.a"
+      - "-usr/lib/*-linux-*/libmvec.a"
+      # unused crt variants
+      - "-usr/lib/*-linux-*/Mcrt1.o"
+      - "-usr/lib/*-linux-*/gcrt1.o"
+      - "-usr/lib/*-linux-*/grcrt1.o"
+      - "-usr/lib/*-linux-*/rcrt1.o"
+      - "-usr/lib/gcc/*-linux-*/14/crtbeginT.o"
+      - "-usr/lib/gcc/*-linux-*/14/crtfastmath.o"
+      - "-usr/lib/gcc/*-linux-*/14/crtoffload*.o"
+
+  # The cranelift-only rust toolchain. Downloads the rustc + rust-std +
+  # cranelift-codegen tarballs published as a github release by the
+  # cranelift-build workflow, installs them under /usr, and gates on the
+  # installed librustc_driver having no libLLVM linkage. See
+  # hack/cranelift_override_build.sh.
+  cranelift:
+    plugin: nil
+    after: [chisel]
+    build-packages:
+      - curl
+      - ca-certificates
+      # xz-utils for `tar -J`, binutils for the readelf libLLVM gate
+      - xz-utils
+      - binutils
+    override-build: bash "$CRAFT_PROJECT_DIR/hack/cranelift_override_build.sh"
+    # Drop the rust test framework (~21 MB) -- not needed in a rock that
+    # only builds release binaries. rust-installer layout (no rust-1.93
+    # deb prefix), so the path differs from the LLVM rock.
+    prime:
+      - "*"
+      - "-usr/lib/rustlib/*-linux-*/lib/libtest-*.rlib"
+
+  wild:
+    plugin: nil
+    after: [chisel]
+    # Downloads a prebuilt wild-linker tarball for the build-for arch
+    # and drops the binary at /usr/bin/wild, with ld -> wild so rustc's
+    # default linker invocation finds it. See hack/wild_override_build.sh.
+    build-packages:
+      - curl
+      - ca-certificates
+    override-build: bash "$CRAFT_PROJECT_DIR/hack/wild_override_build.sh"
+
+  not-quite-cargo:
+    plugin: go
+    after: [chisel]
+    source: https://github.com/lczyk/not-quite-cargo.git
+    source-type: git
+    source-tag: v0.8.3
+    source-subdir: go
+    build-snaps:
+      - go/1.24/stable
+    build-packages:
+      - git
+    override-build: |
+      cd "$CRAFT_PART_BUILD_WORK"
+      mkdir -p ./internal/version
+      go run github.com/lczyk/version/go/cmd/generate-version \
+        -out ./internal/version/version.go -pkg version
+      cd "$CRAFT_PART_BUILD"
+      craftctl default
